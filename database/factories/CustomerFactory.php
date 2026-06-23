@@ -21,6 +21,7 @@ class CustomerFactory extends Factory
     public function definition(): array
     {
         return [
+            'customer_code' => null,
             'first_name' => $this->faker->firstName(),
             'last_name' => $this->faker->lastName(),
             'email' => $this->faker->unique()->safeEmail(),

@@ -268,6 +268,18 @@ describe('Cart Store', function () {
             ->assertJsonValidationErrors('quantity');
     });
 
+    test('quantity must be a whole number', function () {
+        $product = Product::factory()->create(['quantity' => 10]);
+
+        $response = $this->postJson(route('cart.index') . '/change-qty', [
+            'product_id' => $product->id,
+            'quantity' => 1.5,
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors('quantity');
+    });
+
     test('does nothing if product not in cart', function () {
         $product = Product::factory()->create(['quantity' => 10]);
 

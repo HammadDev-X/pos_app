@@ -27,11 +27,11 @@ class OrderStoreRequest extends FormRequest
             'amount' => ['required', 'numeric', 'min:0', 'decimal:0,2'],
             'discount' => ['nullable', 'numeric', 'min:0', 'decimal:0,2'],
             'due_date' => ['nullable', 'date'],
-            'payment_method' => ['required', 'string', 'in:cash,card,bank_transfer,mobile_money'],
+            'payment_method' => ['required', 'string', 'in:cash,card,bank_transfer,mobile_money,jazzcash,easypaisa,account,credit'],
             'custom_items' => ['nullable', 'array'],
             'custom_items.*.name' => ['required_with:custom_items', 'string', 'max:255'],
             'custom_items.*.price' => ['required_with:custom_items', 'numeric', 'min:0.01', 'decimal:0,2'],
-            'custom_items.*.quantity' => ['required_with:custom_items', 'numeric', 'min:0.01'],
+            'custom_items.*.quantity' => ['required_with:custom_items', 'integer', 'min:1'],
         ];
     }
 

@@ -103,7 +103,15 @@ class Cart extends Component {
         axios.get("/admin/cart", {
             headers: { Accept: "application/json", "Content-Type": "application/json" },
         }).then((res) => {
-            this.setState({ cart: Array.isArray(res.data) ? res.data : [] });
+            const cart = Array.isArray(res.data) ? res.data.map((item) => ({
+                ...item,
+                pivot: {
+                    ...item.pivot,
+                    quantity: parseInt(item.pivot.quantity, 10) || 1,
+                },
+            })) : [];
+
+            this.setState({ cart });
         }).catch(() => this.setState({ cart: [] }));
     }
 
@@ -128,7 +136,7 @@ class Cart extends Component {
     }
 
     handleChangeQty(product_id, qty) {
-        const quantity = Number(qty);
+        const quantity = parseInt(qty, 10);
         const cart = this.state.cart.map((c) => {
             if (c.id === product_id) {
                 c.pivot.quantity = qty === "" ? "" : quantity;
@@ -167,7 +175,7 @@ class Cart extends Component {
         event.preventDefault();
         const name = this.state.openItemName.trim();
         const price = Number(this.state.openItemPrice);
-        const quantity = Number(this.state.openItemQuantity);
+        const quantity = parseInt(this.state.openItemQuantity, 10);
 
         if (!name || !price || price <= 0 || !quantity || quantity <= 0) {
             Swal.fire("Error!", "Enter a custom item name, price, and quantity.", "error");
@@ -191,8 +199,8 @@ class Cart extends Component {
     }
 
     getCartCount(cart) {
-        return sum(cart.map((c) => Number(c.pivot.quantity) || 0)) +
-            sum(this.state.openItems.map((item) => Number(item.quantity) || 0));
+        return sum(cart.map((c) => parseInt(c.pivot.quantity, 10) || 0)) +
+            sum(this.state.openItems.map((item) => parseInt(item.quantity, 10) || 0));
     }
 
     getLowStockCount(products) {
@@ -406,8 +414,8 @@ class Cart extends Component {
                                     />
                                     <input
                                         type="number"
-                                        min="0.01"
-                                        step="0.01"
+                                        min="1"
+                                        step="1"
                                         className="form-control form-control-sm"
                                         placeholder={translations["quantity"] || "Qty"}
                                         value={this.state.openItemQuantity}
@@ -419,7 +427,9 @@ class Cart extends Component {
                             <select className="form-control mb-2" onChange={this.setCustomerId}>
                                 <option value="">{translations["general_customer"] || "General Customer"}</option>
                                 {customers.map((cus) => (
-                                    <option key={cus.id} value={cus.id}>{`${cus.first_name} ${cus.last_name}`}</option>
+                                    <option key={cus.id} value={cus.id}>
+                                        {`${cus.customer_code || `CUST-${String(cus.id).padStart(6, "0")}`} - ${cus.first_name} ${cus.last_name}`}
+                                    </option>
                                 ))}
                             </select>
 
@@ -428,6 +438,9 @@ class Cart extends Component {
                                 <option value="card">{translations["card"] || "Card"}</option>
                                 <option value="bank_transfer">{translations["bank_transfer"] || "Bank transfer"}</option>
                                 <option value="mobile_money">{translations["mobile_money"] || "Mobile money"}</option>
+                                <option value="jazzcash">{translations["jazzcash"] || "JazzCash"}</option>
+                                <option value="easypaisa">{translations["easypaisa"] || "EasyPaisa"}</option>
+                                <option value="account">{translations["account"] || "Account"}</option>
                             </select>
 
                             <div className="d-flex mb-3">
@@ -465,10 +478,10 @@ class Cart extends Component {
                                                 <div className="cart-line-actions">
                                                     <input
                                                         type="number"
-                                                        min="0.01"
-                                                        step="0.01"
+                                                        min="1"
+                                                        step="1"
                                                         className="form-control form-control-sm qty"
-                                                        value={c.pivot.quantity}
+                                                        value={c.pivot.quantity === "" ? "" : parseInt(c.pivot.quantity, 10)}
                                                         onChange={(event) => this.handleChangeQty(c.id, event.target.value)}
                                                     />
                                                     <span>{window.APP.currency_symbol} {(c.price * c.pivot.quantity).toFixed(2)}</span>
@@ -487,12 +500,12 @@ class Cart extends Component {
                                                 <div className="cart-line-actions">
                                                     <input
                                                         type="number"
-                                                        min="0.01"
-                                                        step="0.01"
+                                                        min="1"
+                                                        step="1"
                                                         className="form-control form-control-sm qty"
                                                         value={item.quantity}
                                                         onChange={(event) => {
-                                                            const quantity = Number(event.target.value);
+                                                            const quantity = parseInt(event.target.value, 10);
                                                             this.setState({
                                                                 openItems: openItems.map((openItem) =>
                                                                     openItem.id === item.id ? { ...openItem, quantity } : openItem
@@ -593,7 +606,7 @@ class Cart extends Component {
                                         </span>
                                         {p.track_stock ? (
                                             <span className={window.APP.warning_quantity > p.quantity ? "stock-badge low" : "stock-badge"}>
-                                                {Number(p.quantity).toFixed(2)}
+                                                {Number(p.quantity).toFixed(0)}
                                             </span>
                                         ) : null}
                                     </button>

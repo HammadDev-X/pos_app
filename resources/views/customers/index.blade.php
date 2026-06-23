@@ -15,6 +15,7 @@
             <thead>
                 <tr>
                     <th>{{ __('customer.ID') }}</th>
+                    <th>Customer Code</th>
                     <th>{{ __('customer.Avatar') }}</th>
                     <th>{{ __('customer.First_Name') }}</th>
                     <th>{{ __('customer.Last_Name') }}</th>
@@ -29,6 +30,7 @@
                 @foreach ($customers as $customer)
                 <tr>
                     <td>{{$customer->id}}</td>
+                    <td><span class="badge badge-info">{{ $customer->customer_code }}</span></td>
                     <td>
                         <img width="50" src="{{$customer->getAvatarUrl()}}" alt="">
                     </td>

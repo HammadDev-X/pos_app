@@ -45,6 +45,7 @@ class Customer extends Model
     use HasFactory;
 
     protected $fillable = [
+        'customer_code',
         'first_name',
         'last_name',
         'email',
@@ -53,6 +54,24 @@ class Customer extends Model
         'avatar',
         'user_id',
     ];
+
+    protected static function booted(): void
+    {
+        static::created(function (Customer $customer): void {
+            if (filled($customer->customer_code)) {
+                return;
+            }
+
+            $customer->forceFill([
+                'customer_code' => static::codeForId($customer->id),
+            ])->saveQuietly();
+        });
+    }
+
+    public static function codeForId(int $id): string
+    {
+        return 'CUST-' . str_pad((string) $id, 6, '0', STR_PAD_LEFT);
+    }
 
     public function getAvatarUrl(): string
     {

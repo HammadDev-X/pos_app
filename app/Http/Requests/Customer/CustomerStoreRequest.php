@@ -16,6 +16,7 @@ class CustomerStoreRequest extends FormRequest
         return [
             'first_name' => ['required', 'string', 'max:20'],
             'last_name' => ['required', 'string', 'max:20'],
+            'customer_code' => ['nullable', 'string', 'max:30', 'unique:customers,customer_code'],
             'email' => ['nullable', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:20'],
             'address' => ['nullable', 'string', 'max:500'],

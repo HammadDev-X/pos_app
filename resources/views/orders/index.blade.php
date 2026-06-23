@@ -9,25 +9,26 @@
 
     <div class="card">
         <div class="card-body">
-            <div class="row">
-                <div class="col-md-7"></div>
-                <div class="col-md-5">
+            <div class="admin-filter-bar">
+                <div></div>
+                <div>
                     <form action="{{route('orders.index')}}">
-                        <div class="row">
-                            <div class="col-md-5">
+                        <div class="form-row align-items-end">
+                            <div class="col-sm-5 mb-2 mb-sm-0">
                                 <input type="date" name="start_date" class="form-control" value="{{request('start_date')}}" />
                             </div>
-                            <div class="col-md-5">
+                            <div class="col-sm-5 mb-2 mb-sm-0">
                                 <input type="date" name="end_date" class="form-control" value="{{request('end_date')}}" />
                             </div>
-                            <div class="col-md-2">
-                                <button class="btn btn-outline-primary" type="submit">{{ __('order.submit') }}</button>
+                            <div class="col-sm-2">
+                                <button class="btn btn-outline-primary btn-block" type="submit">{{ __('order.submit') }}</button>
                             </div>
                         </div>
                     </form>
                 </div>
             </div>
-            <table class="table">
+            <div class="table-responsive">
+            <table class="table orders-table">
                 <thead>
                 <tr>
                     <th>{{ __('order.ID') }}</th>
@@ -51,7 +52,7 @@
                         $customerMobile = $order->customer?->phone ?: 'N/A';
                         $invoiceItems = $order->items->map(fn ($item): array => [
                             'name' => $item->product?->name ?? $item->custom_item_name ?? 'Product removed',
-                            'quantity' => (float) $item->quantity,
+                            'quantity' => (int) $item->quantity,
                             'rate' => $item->unitPrice(),
                             'total' => $item->subtotal(),
                         ]);
@@ -125,6 +126,7 @@
                 </tr>
                 </tfoot>
             </table>
+            </div>
             {{ $orders->render() }}
         </div>
     </div>
@@ -150,6 +152,9 @@
                                     <option value="card">Card</option>
                                     <option value="bank_transfer">Bank transfer</option>
                                     <option value="mobile_money">Mobile money</option>
+                                    <option value="jazzcash">JazzCash</option>
+                                    <option value="easypaisa">EasyPaisa</option>
+                                    <option value="account">Account</option>
                                 </select>
                             </div>
                             <div class="form-group">
@@ -242,7 +247,7 @@
                         itemsHTML += '<tr>' +
                             '<td>' + (index + 1) + '</td>' +
                             '<td>' + escapeHtml(item.name || 'N/A') + '</td>' +
-                            '<td>' + parseFloat(item.quantity || 0).toFixed(2) + '</td>' +
+                            '<td>' + parseInt(item.quantity || 0, 10) + '</td>' +
                             '<td>' + currencySymbol + ' ' + parseFloat(item.rate || 0).toFixed(2) + '</td>' +
                             '<td>' + currencySymbol + ' ' + parseFloat(item.total || 0).toFixed(2) + '</td>' +
                             '</tr>';

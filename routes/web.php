@@ -27,18 +27,20 @@ Auth::routes();
 
 Route::prefix('admin')->middleware(['auth', 'locale'])->group(function (): void {
     Route::get('/', HomeController::class)->name('home');
-    Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
-    Route::post('/settings', [SettingController::class, 'store'])->name('settings.store');
+    Route::middleware('role:admin,manager')->group(function (): void {
+        Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
+        Route::post('/settings', [SettingController::class, 'store'])->name('settings.store');
+        Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
+        Route::get('/exports', [DataExportController::class, 'index'])->name('exports.index');
+        Route::get('/exports/{type}', [DataExportController::class, 'export'])->name('exports.download');
+    });
     Route::resource('categories', CategoryController::class)->except(['show']);
     Route::resource('products', ProductController::class);
     Route::resource('stock-adjustments', StockAdjustmentController::class)->only(['index', 'create', 'store']);
     Route::resource('expenses', ExpenseController::class)->only(['index', 'create', 'store', 'destroy']);
     Route::get('/reports/business', [BusinessReportController::class, 'index'])->name('reports.business');
-    Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
     Route::get('/reports/product-analytics', [ProductAnalyticsController::class, 'index'])->name('reports.product-analytics');
     Route::get('/reports/product-analytics/data', [ProductAnalyticsController::class, 'data'])->name('reports.product-analytics.data');
-    Route::get('/exports', [DataExportController::class, 'index'])->name('exports.index');
-    Route::get('/exports/{type}', [DataExportController::class, 'export'])->name('exports.download');
     Route::resource('customers', CustomerController::class);
     Route::get('/orders/{order}/return', [OrderController::class, 'returnForm'])->name('orders.return');
     Route::post('/orders/{order}/return', [OrderController::class, 'processReturn'])->name('orders.return.store');

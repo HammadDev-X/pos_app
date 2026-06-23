@@ -149,7 +149,7 @@ class OrderController extends Controller
 
     private function createCustomOrderItem(Order $order, array $item): void
     {
-        $quantity = (float) $item['quantity'];
+        $quantity = (int) $item['quantity'];
         $unitPrice = (float) $item['price'];
 
         $order->items()->create([

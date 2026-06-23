@@ -52,6 +52,11 @@ class User extends Authenticatable
 {
     use HasFactory, Notifiable;
 
+    public const ROLE_ADMIN = 'admin';
+    public const ROLE_MANAGER = 'manager';
+    public const ROLE_CASHIER = 'cashier';
+    public const ROLE_STAFF = 'staff';
+
     /**
      * The attributes that are mass assignable.
      *
@@ -84,6 +89,10 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
     ];
 
+    protected $attributes = [
+        'role' => self::ROLE_ADMIN,
+    ];
+
     public function cart()
     {
         return $this->belongsToMany(related: Product::class, table: 'user_cart')->withPivot('quantity');
@@ -113,6 +122,16 @@ class User extends Authenticatable
 
     public function isAdmin(): bool
     {
-        return $this->role === 'admin';
+        return $this->role === self::ROLE_ADMIN;
+    }
+
+    public function hasRole(string $role): bool
+    {
+        return $this->role === $role;
+    }
+
+    public function hasAnyRole(array $roles): bool
+    {
+        return in_array($this->role, $roles, true);
     }
 }

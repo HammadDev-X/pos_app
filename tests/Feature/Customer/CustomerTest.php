@@ -60,7 +60,7 @@ describe('Customers Index', function () {
         $response->assertOk()
             ->assertJsonCount(5)
             ->assertJsonStructure([
-                '*' => ['id', 'first_name', 'last_name', 'email', 'phone', 'address']
+                '*' => ['id', 'customer_code', 'first_name', 'last_name', 'email', 'phone', 'address']
             ]);
     });
 
@@ -110,6 +110,24 @@ describe('Customer Store', function () {
 
         expect($customer->user_id)
             ->toBe($this->user->id);
+    });
+
+    test('customer gets a unique customer code automatically', function () {
+        $this->post(route('customers.store'), $this->validCustomerData)
+            ->assertRedirect(route('customers.index'));
+
+        $customer = Customer::firstWhere('email', 'john@example.com');
+
+        expect($customer->customer_code)
+            ->toBe(Customer::codeForId($customer->id));
+    });
+
+    test('customer code must be unique when provided', function () {
+        Customer::factory()->create(['customer_code' => 'CUST-SPECIAL']);
+
+        $this->post(route('customers.store'), $this->validCustomerData + [
+            'customer_code' => 'CUST-SPECIAL',
+        ])->assertSessionHasErrors('customer_code');
     });
 
     test('customer can be created with avatar', function () {

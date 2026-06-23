@@ -14,6 +14,10 @@ use Illuminate\View\View;
 class StockAdjustmentController extends Controller
 {
     private const TYPES = [
+        'stock_in' => 'Stock in',
+        'stock_out' => 'Stock out',
+        'customer_return' => 'Customer return',
+        'disposed' => 'Disposed stock',
         'increase' => 'Manual stock increase',
         'decrease' => 'Manual stock decrease',
         'set' => 'Set exact stock',
@@ -59,8 +63,8 @@ class StockAdjustmentController extends Controller
             $before = $product->quantity;
 
             $after = match ($data['type']) {
-                'increase' => $before + $data['quantity'],
-                'decrease', 'damage', 'expired_disposal' => max(0, $before - $data['quantity']),
+                'increase', 'stock_in', 'customer_return' => $before + $data['quantity'],
+                'decrease', 'stock_out', 'damage', 'disposed', 'expired_disposal' => max(0, $before - $data['quantity']),
                 default => $data['quantity'],
             };
 

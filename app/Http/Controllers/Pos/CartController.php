@@ -88,7 +88,7 @@ class CartController extends Controller
             ], 400);
         }
 
-        $cartItem->pivot->quantity = $request->quantity;
+        $cartItem->pivot->quantity = (int) $request->quantity;
         $cartItem->pivot->save();
 
         return response()->json(['success' => true]);
@@ -126,8 +126,7 @@ class CartController extends Controller
             ], 400);
         }
 
-        // Use numeric increment to support decimals
-        $cartItem->pivot->quantity = $cartItem->pivot->quantity + 1;
+        $cartItem->pivot->quantity = ((int) $cartItem->pivot->quantity) + 1;
         $cartItem->pivot->save();
 
         return response()->json(['success' => true]);

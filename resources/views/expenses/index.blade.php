@@ -19,6 +19,82 @@
             <div class="icon"><i class="fas fa-receipt"></i></div>
         </div>
     </div>
+    <div class="col-md-3">
+        <div class="small-box bg-warning">
+            <div class="inner">
+                <h3>{{ config('settings.currency_symbol') }}{{ number_format((float) $dailyExpense, 2) }}</h3>
+                <p>Daily Expense</p>
+            </div>
+            <div class="icon"><i class="fas fa-calendar-day"></i></div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="small-box bg-info">
+            <div class="inner">
+                <h3>{{ config('settings.currency_symbol') }}{{ number_format((float) $monthlyExpense, 2) }}</h3>
+                <p>Monthly Expense</p>
+            </div>
+            <div class="icon"><i class="fas fa-calendar-alt"></i></div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header"><h3 class="card-title">Category-wise Expense</h3></div>
+            <div class="card-body p-0">
+                <table class="table mb-0">
+                    @forelse($categoryWiseExpense as $row)
+                        <tr>
+                            <th>{{ $row['category'] }}</th>
+                            <td>{{ config('settings.currency_symbol') }}{{ number_format((float) $row['amount'], 2) }}</td>
+                        </tr>
+                    @empty
+                        <tr><td class="text-muted">No expense categories found</td></tr>
+                    @endforelse
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header"><h3 class="card-title">Expense Comparison by Month</h3></div>
+            <div class="card-body p-0">
+                <table class="table mb-0">
+                    @forelse($expenseComparisonByMonth as $row)
+                        <tr>
+                            <th>{{ $row['label'] }}</th>
+                            <td>{{ config('settings.currency_symbol') }}{{ number_format((float) $row['amount'], 2) }}</td>
+                        </tr>
+                    @empty
+                        <tr><td class="text-muted">No monthly expenses found</td></tr>
+                    @endforelse
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header"><h3 class="card-title">Expense vs Sales Comparison</h3></div>
+            <div class="card-body p-0">
+                <table class="table mb-0">
+                    <thead><tr><th>Month</th><th>Sales</th><th>Expense</th></tr></thead>
+                    <tbody>
+                    @forelse($expenseVsSalesComparison as $row)
+                        <tr>
+                            <td>{{ $row['label'] }}</td>
+                            <td>{{ config('settings.currency_symbol') }}{{ number_format((float) $row['sales'], 2) }}</td>
+                            <td>{{ config('settings.currency_symbol') }}{{ number_format((float) $row['amount'], 2) }}</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="3" class="text-muted">No comparison data found</td></tr>
+                    @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="card">

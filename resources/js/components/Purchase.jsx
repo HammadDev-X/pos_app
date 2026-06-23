@@ -467,14 +467,14 @@ class Purchase extends Component {
                                 </h3>
                             </div>
                             <div className="card-body p-0 purchase-cart">
-                                <table className="table table-sm table-hover mb-0">
+                                <table className="table table-sm table-hover mb-0 purchase-items-table">
                                     <thead>
                                     <tr>
                                         <th>Product</th>
-                                        <th width="70">Qty</th>
-                                        <th width="90">Cost</th>
-                                        <th width="120">Expiry</th>
-                                        <th width="40"></th>
+                                        <th>Qty</th>
+                                        <th>Cost</th>
+                                        <th>Expiry</th>
+                                        <th></th>
                                     </tr>
                                     </thead>
                                     <tbody>

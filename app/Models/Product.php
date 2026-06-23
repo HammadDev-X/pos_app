@@ -110,6 +110,11 @@ class Product extends Model
         return $this->hasMany(StockAdjustment::class);
     }
 
+    public function purchaseItems(): HasMany
+    {
+        return $this->hasMany(PurchaseItem::class);
+    }
+
     public static function generateSku(string $prefix = 'SKU-'): string
     {
         $next = ((int) static::max('id')) + 1;
