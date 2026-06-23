@@ -13,11 +13,11 @@ class SettingsSeeder extends Seeder
     public function run(): void
     {
         $data = [
-            ['key' => 'app_name', 'value' => 'Laravel-POS'],
+            ['key' => 'app_name', 'value' => 'Musa Jan Frozen Foods'],
             ['key' => 'shop_address', 'value' => 'Main Market, Demo City'],
             ['key' => 'shop_phone', 'value' => '+1 555 0100'],
             ['key' => 'tax_number', 'value' => 'TAX-000123'],
-            ['key' => 'receipt_footer', 'value' => 'Thank you for shopping with us.'],
+            ['key' => 'receipt_footer', 'value' => 'Thank you for shopping with Musa Jan Frozen Foods.'],
             ['key' => 'currency_symbol', 'value' => '$'],
             ['key' => 'warning_quantity', 'value' => '10'],
         ];

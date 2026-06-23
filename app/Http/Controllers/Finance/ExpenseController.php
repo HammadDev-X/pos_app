@@ -11,6 +11,17 @@ use Illuminate\View\View;
 
 class ExpenseController extends Controller
 {
+    private const CATEGORIES = [
+        'Petrol / Fuel',
+        'Packaging',
+        'Delivery',
+        'Salary',
+        'Rent',
+        'Repairs & Maintenance',
+        'Marketing',
+        'Other Expenses',
+    ];
+
     public function index(Request $request): View
     {
         $expenseQuery = Expense::with('user')
@@ -25,7 +36,10 @@ class ExpenseController extends Controller
 
         return view('expenses.index', [
             'expenses' => $expenses,
-            'categories' => Expense::query()->distinct()->orderBy('category')->pluck('category'),
+            'categories' => collect(self::CATEGORIES)
+                ->merge(Expense::query()->distinct()->orderBy('category')->pluck('category'))
+                ->unique()
+                ->values(),
             'total' => (clone $expenseQuery)->sum('amount'),
         ]);
     }
@@ -33,7 +47,7 @@ class ExpenseController extends Controller
     public function create(): View
     {
         return view('expenses.create', [
-            'categories' => ['Rent', 'Salary', 'Electricity', 'Transport', 'Repair', 'Marketing', 'Other'],
+            'categories' => self::CATEGORIES,
         ]);
     }
 

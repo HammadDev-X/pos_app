@@ -32,6 +32,7 @@ class HomeController extends Controller
             ->flatMap->payments
             ->filter(fn ($payment): bool => $payment->order && $payment->created_at->gt($payment->order->created_at))
             ->sum('amount');
+        $expenseTotals = $this->expenseLedgerTotals();
         $monthlyCalendar = $this->monthlySalesCalendar($orders);
         $expenseBreakdown = Expense::select('category', DB::raw('SUM(amount) as total'))
             ->whereBetween('expense_date', [now()->startOfMonth()->toDateString(), now()->toDateString()])
@@ -55,7 +56,12 @@ class HomeController extends Controller
                 ->filter(fn (Customer $customer): bool => $customer->orders->sum(fn (Order $order): float => max($order->remainingBalance(), 0)) > 0)
                 ->count(),
             'total_receivable' => $creditSales,
-            'total_expenses' => (float) Expense::sum('amount'),
+            'total_expenses' => $expenseTotals['total'],
+            'petrol_expense' => $expenseTotals['petrol'],
+            'packaging_expense' => $expenseTotals['packaging'],
+            'delivery_expense' => $expenseTotals['delivery'],
+            'salary_expense' => $expenseTotals['salary'],
+            'other_expenses' => $expenseTotals['other'],
             'expense_breakdown' => $expenseBreakdown,
             'monthly_calendar' => $monthlyCalendar,
             'products_count' => Product::count(),
@@ -71,6 +77,55 @@ class HomeController extends Controller
             'current_month_products' => Product::currentMonthBestSelling()->get(),
             'past_months_products' => Product::pastMonthsHotProducts()->get(),
         ]);
+    }
+
+    private function expenseLedgerTotals(): array
+    {
+        $expenses = Expense::query()
+            ->select('category', DB::raw('SUM(amount) as total'))
+            ->groupBy('category')
+            ->get();
+
+        $totals = [
+            'petrol' => 0.0,
+            'packaging' => 0.0,
+            'delivery' => 0.0,
+            'salary' => 0.0,
+        ];
+        $totalExpenses = 0.0;
+
+        foreach ($expenses as $expense) {
+            $category = strtolower((string) $expense->category);
+            $amount = (float) $expense->total;
+            $totalExpenses += $amount;
+
+            if (str_contains($category, 'petrol') || str_contains($category, 'fuel') || str_contains($category, 'transport')) {
+                $totals['petrol'] += $amount;
+                continue;
+            }
+
+            if (str_contains($category, 'packaging') || str_contains($category, 'packing')) {
+                $totals['packaging'] += $amount;
+                continue;
+            }
+
+            if (str_contains($category, 'delivery') || str_contains($category, 'courier') || str_contains($category, 'shipping')) {
+                $totals['delivery'] += $amount;
+                continue;
+            }
+
+            if (str_contains($category, 'salary') || str_contains($category, 'wage') || str_contains($category, 'staff')) {
+                $totals['salary'] += $amount;
+            }
+        }
+
+        $knownExpenses = array_sum($totals);
+
+        return [
+            ...$totals,
+            'other' => max($totalExpenses - $knownExpenses, 0),
+            'total' => $totalExpenses,
+        ];
     }
 
     private function monthlySalesCalendar(Collection $orders): array

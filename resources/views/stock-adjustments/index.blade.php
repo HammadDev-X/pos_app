@@ -24,7 +24,7 @@
                 <div class="col-md-3">
                     <select name="type" class="form-control">
                         <option value="">All Types</option>
-                        @foreach(['increase' => 'Increase', 'decrease' => 'Decrease', 'set' => 'Set Quantity'] as $value => $label)
+                        @foreach($types as $value => $label)
                             <option value="{{ $value }}" @selected(request('type') === $value)>{{ $label }}</option>
                         @endforeach
                     </select>
@@ -43,6 +43,7 @@
                         <th>Date</th>
                         <th>Product</th>
                         <th>Type</th>
+                        <th>Qty</th>
                         <th>Before</th>
                         <th>After</th>
                         <th>Reason</th>
@@ -54,7 +55,8 @@
                         <tr>
                             <td>{{ $adjustment->created_at }}</td>
                             <td>{{ $adjustment->product->name }}</td>
-                            <td><span class="badge badge-secondary">{{ ucfirst($adjustment->type) }}</span></td>
+                            <td><span class="badge badge-secondary">{{ $types[$adjustment->type] ?? ucfirst(str_replace('_', ' ', $adjustment->type)) }}</span></td>
+                            <td>{{ $adjustment->quantity }}</td>
                             <td>{{ $adjustment->quantity_before }}</td>
                             <td>{{ $adjustment->quantity_after }}</td>
                             <td>{{ $adjustment->reason }}</td>
@@ -62,7 +64,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-4">No stock adjustments found</td>
+                            <td colspan="8" class="text-center text-muted py-4">No stock adjustments found</td>
                         </tr>
                     @endforelse
                 </tbody>

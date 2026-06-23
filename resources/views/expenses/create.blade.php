@@ -16,12 +16,12 @@
 
             <div class="form-group">
                 <label for="category">Category</label>
-                <input list="expense-categories" type="text" name="category" id="category" class="form-control @error('category') is-invalid @enderror" value="{{ old('category') }}" placeholder="Rent, salary, electricity..." required>
-                <datalist id="expense-categories">
+                <select name="category" id="category" class="form-control @error('category') is-invalid @enderror" required>
+                    <option value="">Select Category</option>
                     @foreach($categories as $category)
-                        <option value="{{ $category }}"></option>
+                        <option value="{{ $category }}" @selected(old('category') === $category)>{{ $category }}</option>
                     @endforeach
-                </datalist>
+                </select>
                 @error('category')<span class="invalid-feedback"><strong>{{ $message }}</strong></span>@enderror
             </div>
 

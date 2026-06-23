@@ -77,6 +77,7 @@ class Product extends Model
     protected $casts = [
         'price' => 'decimal:2',
         'wholesale_price' => 'decimal:2',
+        'quantity' => 'decimal:2',
         'minimum_stock_level' => 'decimal:2',
         'status' => 'boolean',
         'track_stock' => 'boolean',
@@ -96,7 +97,7 @@ class Product extends Model
             $product->barcode = static::cleanOptionalCode($product->barcode);
             $product->short_code = static::cleanOptionalCode($product->short_code);
             $product->sku = blank($product->sku) ? null : trim((string) $product->sku);
-            $product->unit = blank($product->unit) ? 'pcs' : trim((string) $product->unit);
+            $product->unit = blank($product->unit) ? 'piece' : trim((string) $product->unit);
 
             if (blank($product->sku)) {
                 $product->sku = static::generateSku();

@@ -1,5 +1,5 @@
 <!-- Navbar -->
-<nav class="main-header navbar navbar-expand navbar-white navbar-light">
+<nav class="main-header navbar navbar-expand navbar-white navbar-light pos-topbar">
     <!-- Left navbar links -->
     <ul class="navbar-nav">
         <li class="nav-item">
@@ -8,7 +8,10 @@
             </a>
         </li>
         <li class="nav-item d-none d-sm-inline-block">
-            <a href="{{ route('home') }}" class="nav-link">{{ __('dashboard.title') }}</a>
+            <a href="{{ route('home') }}" class="nav-link">
+                <i class="fas fa-chart-pie"></i>
+                {{ __('dashboard.title') }}
+            </a>
         </li>
     </ul>
 

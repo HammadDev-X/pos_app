@@ -57,6 +57,8 @@
                         <th>{{ __('Date') }}</th>
                         <th>{{ __('Supplier') }}</th>
                         <th>{{ __('Items') }}</th>
+                        <th>{{ __('Transport') }}</th>
+                        <th>{{ __('Other Cost') }}</th>
                         <th>{{ __('Total Amount') }}</th>
                         <th>{{ __('Status') }}</th>
                         <th>{{ __('Actions') }}</th>
@@ -69,6 +71,8 @@
                             <td>{{ optional($purchase->purchase_date)->format('Y-m-d') }}</td>
                             <td>{{ $purchase->supplier->first_name }} {{ $purchase->supplier->last_name }}</td>
                             <td><span class="badge badge-info">{{ $purchase->items->count() }}</span></td>
+                            <td>{{ config('settings.currency_symbol') }}{{ number_format((float) $purchase->transport_cost, 2) }}</td>
+                            <td>{{ config('settings.currency_symbol') }}{{ number_format((float) $purchase->other_cost, 2) }}</td>
                             <td>{{ config('settings.currency_symbol') }}{{ number_format((float) $purchase->total_amount, 2) }}</td>
                             <td>
                                 <span class="badge badge-{{ ['completed' => 'success', 'pending' => 'warning', 'cancelled' => 'danger'][$purchase->status] ?? 'secondary' }}">
@@ -89,7 +93,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-4">
+                            <td colspan="9" class="text-center text-muted py-4">
                                 <p>{{ __('No purchases found') }}</p>
                                 <a href="{{ route('purchases.create') }}" class="btn btn-primary">
                                     <i class="fas fa-plus"></i> {{ __('Create First Purchase') }}

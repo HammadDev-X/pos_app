@@ -13,6 +13,14 @@ use Illuminate\View\View;
 
 class StockAdjustmentController extends Controller
 {
+    private const TYPES = [
+        'increase' => 'Manual stock increase',
+        'decrease' => 'Manual stock decrease',
+        'set' => 'Set exact stock',
+        'damage' => 'Damage / wastage',
+        'expired_disposal' => 'Expired product disposal',
+    ];
+
     public function index(Request $request): View
     {
         $adjustments = StockAdjustment::with(['product', 'user'])
@@ -25,6 +33,7 @@ class StockAdjustmentController extends Controller
         return view('stock-adjustments.index', [
             'adjustments' => $adjustments,
             'products' => Product::orderBy('name')->get(),
+            'types' => self::TYPES,
         ]);
     }
 
@@ -32,6 +41,7 @@ class StockAdjustmentController extends Controller
     {
         return view('stock-adjustments.create', [
             'products' => Product::orderBy('name')->get(),
+            'types' => self::TYPES,
         ]);
     }
 
@@ -39,7 +49,7 @@ class StockAdjustmentController extends Controller
     {
         $data = $request->validate([
             'product_id' => ['required', 'exists:products,id'],
-            'type' => ['required', 'in:increase,decrease,set'],
+            'type' => ['required', 'in:' . implode(',', array_keys(self::TYPES))],
             'quantity' => ['required', 'numeric', 'min:0'],
             'reason' => ['required', 'string', 'max:255'],
         ]);
@@ -50,7 +60,7 @@ class StockAdjustmentController extends Controller
 
             $after = match ($data['type']) {
                 'increase' => $before + $data['quantity'],
-                'decrease' => max(0, $before - $data['quantity']),
+                'decrease', 'damage', 'expired_disposal' => max(0, $before - $data['quantity']),
                 default => $data['quantity'],
             };
 

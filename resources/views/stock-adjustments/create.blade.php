@@ -25,9 +25,9 @@
             <div class="form-group">
                 <label for="type">Adjustment Type</label>
                 <select name="type" id="type" class="form-control @error('type') is-invalid @enderror" required>
-                    <option value="increase" @selected(old('type') === 'increase')>Increase</option>
-                    <option value="decrease" @selected(old('type') === 'decrease')>Decrease</option>
-                    <option value="set" @selected(old('type') === 'set')>Set Quantity</option>
+                    @foreach($types as $value => $label)
+                        <option value="{{ $value }}" @selected(old('type') === $value)>{{ $label }}</option>
+                    @endforeach
                 </select>
                 @error('type')<span class="invalid-feedback"><strong>{{ $message }}</strong></span>@enderror
             </div>
@@ -40,7 +40,7 @@
 
             <div class="form-group">
                 <label for="reason">Reason</label>
-                <input type="text" name="reason" id="reason" class="form-control @error('reason') is-invalid @enderror" value="{{ old('reason') }}" placeholder="Damage, correction, opening stock, missing item..." required>
+                <input type="text" name="reason" id="reason" class="form-control @error('reason') is-invalid @enderror" value="{{ old('reason') }}" placeholder="Damage details, expired batch, opening stock, correction..." required>
                 @error('reason')<span class="invalid-feedback"><strong>{{ $message }}</strong></span>@enderror
             </div>
 

@@ -472,7 +472,7 @@ class Purchase extends Component {
                                     <tr>
                                         <th>Product</th>
                                         <th width="70">Qty</th>
-                                        <th width="90">Price</th>
+                                        <th width="90">Cost</th>
                                         <th width="120">Expiry</th>
                                         <th width="40"></th>
                                     </tr>
@@ -499,14 +499,6 @@ class Purchase extends Component {
                                             </td>
                                             <td>
                                                 <input
-                                                    type="date"
-                                                    className="form-control form-control-sm"
-                                                    value={c.pivot.expiry_date || ""}
-                                                    onChange={(event) => this.handleExpiryChange(c.id, event.target.value)}
-                                                />
-                                            </td>
-                                            <td>
-                                                <input
                                                     type="number"
                                                     className="form-control form-control-sm"
                                                     value={c.pivot.purchase_price || 0}
@@ -518,6 +510,14 @@ class Purchase extends Component {
                                                     }
                                                     min="0"
                                                     step="0.01"
+                                                />
+                                            </td>
+                                            <td>
+                                                <input
+                                                    type="date"
+                                                    className="form-control form-control-sm"
+                                                    value={c.pivot.expiry_date || ""}
+                                                    onChange={(event) => this.handleExpiryChange(c.id, event.target.value)}
                                                 />
                                             </td>
                                             <td>

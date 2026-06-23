@@ -40,6 +40,25 @@
 </div>
 
 <div class="row">
+    @foreach([
+        ['Inventory Qty', number_format((float) $inventoryQuantity, 2), 'bg-secondary', 'fa-boxes', false],
+        ['Inventory Cost Value', $inventoryCostValue, 'bg-info', 'fa-warehouse', true],
+        ['Inventory Selling Value', $inventorySellingValue, 'bg-success', 'fa-tags', true],
+        ['Estimated Margin', $inventoryEstimatedMargin, $inventoryEstimatedMargin >= 0 ? 'bg-primary' : 'bg-danger', 'fa-percentage', true],
+    ] as [$label, $value, $color, $icon, $money])
+        <div class="col-md-3">
+            <div class="small-box {{ $color }}">
+                <div class="inner">
+                    <h3>{{ $money ? config('settings.currency_symbol') . number_format((float) $value, 2) : $value }}</h3>
+                    <p>{{ $label }}</p>
+                </div>
+                <div class="icon"><i class="fas {{ $icon }}"></i></div>
+            </div>
+        </div>
+    @endforeach
+</div>
+
+<div class="row">
     <div class="col-md-6">
         <div class="card">
             <div class="card-header"><h3 class="card-title">Profit Breakdown</h3></div>
@@ -71,6 +90,69 @@
                     @empty
                         <tr><td class="text-muted">No payments in this range</td></tr>
                     @endforelse
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-7">
+        <div class="card">
+            <div class="card-header"><h3 class="card-title">Product-wise Stock Value</h3></div>
+            <div class="card-body p-0">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Qty</th>
+                            <th>Cost Value</th>
+                            <th>Selling Value</th>
+                            <th>Margin</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($productStockValues as $row)
+                            <tr>
+                                <td>{{ $row['name'] }}</td>
+                                <td>{{ number_format((float) $row['quantity'], 2) }}</td>
+                                <td>{{ config('settings.currency_symbol') }}{{ number_format((float) $row['cost_value'], 2) }}</td>
+                                <td>{{ config('settings.currency_symbol') }}{{ number_format((float) $row['selling_value'], 2) }}</td>
+                                <td>{{ config('settings.currency_symbol') }}{{ number_format((float) $row['estimated_margin'], 2) }}</td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="5" class="text-muted">No stock value available</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-5">
+        <div class="card">
+            <div class="card-header"><h3 class="card-title">Category-wise Stock Value</h3></div>
+            <div class="card-body p-0">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Qty</th>
+                            <th>Cost</th>
+                            <th>Margin</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($categoryStockValues as $row)
+                            <tr>
+                                <td>{{ $row['category'] }}</td>
+                                <td>{{ number_format((float) $row['quantity'], 2) }}</td>
+                                <td>{{ config('settings.currency_symbol') }}{{ number_format((float) $row['cost_value'], 2) }}</td>
+                                <td>{{ config('settings.currency_symbol') }}{{ number_format((float) $row['estimated_margin'], 2) }}</td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="4" class="text-muted">No category value available</td></tr>
+                        @endforelse
+                    </tbody>
                 </table>
             </div>
         </div>

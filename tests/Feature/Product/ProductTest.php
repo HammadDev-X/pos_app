@@ -130,6 +130,40 @@ describe('Product Store', function () {
         ]);
     });
 
+    test('product can be created with full inventory and stock management fields', function () {
+        $data = [
+            'name' => 'Frozen Chicken Carton',
+            'description' => 'Premium frozen chicken',
+            'sku' => 'CHK-001',
+            'barcode' => '998877665544',
+            'unit' => 'carton',
+            'purchase_price' => '1200.50',
+            'price' => '1500.00',
+            'wholesale_price' => '1400.00',
+            'minimum_stock_level' => '5',
+            'quantity' => '12',
+            'track_stock' => true,
+            'status' => false,
+        ];
+
+        $this->post(route('products.store'), $data)
+            ->assertRedirect(route('products.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('products', [
+            'name' => 'Frozen Chicken Carton',
+            'sku' => 'CHK-001',
+            'barcode' => '998877665544',
+            'unit' => 'carton',
+            'purchase_price' => '1200.50',
+            'price' => '1500.00',
+            'wholesale_price' => '1400.00',
+            'minimum_stock_level' => '5.00',
+            'quantity' => 12,
+            'status' => false,
+        ]);
+    });
+
     describe('Product Edit', function () {
         test('authenticated users can view edit form', function () {
             $product = Product::factory()->create();

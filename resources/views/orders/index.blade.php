@@ -47,6 +47,14 @@
                         $orderTotal = $order->total();
                         $orderReceived = $order->receivedAmount();
                         $orderRemaining = $orderTotal - $orderReceived;
+                        $orderDiscount = $order->discountAmount();
+                        $customerMobile = $order->customer?->phone ?: 'N/A';
+                        $invoiceItems = $order->items->map(fn ($item): array => [
+                            'name' => $item->product?->name ?? $item->custom_item_name ?? 'Product removed',
+                            'quantity' => (float) $item->quantity,
+                            'rate' => $item->unitPrice(),
+                            'total' => $item->subtotal(),
+                        ]);
                     @endphp
                     <tr>
                         <td>{{$order->id}}</td>
@@ -74,9 +82,12 @@
                                 data-target="#modalInvoice"
                                 data-order-id="{{ $order->id }}"
                                 data-customer-name="{{ $order->getCustomerName() }}"
+                                data-customer-mobile="{{ $customerMobile }}"
                                 data-total="{{ $orderTotal }}"
                                 data-received="{{ $orderReceived }}"
-                                data-items='@json($order->items)'
+                                data-discount="{{ $orderDiscount }}"
+                                data-balance="{{ max($orderRemaining, 0) }}"
+                                data-items='@json($invoiceItems, JSON_HEX_APOS)'
                                 data-created-at="{{ $order->created_at }}">
                                 <ion-icon size="small" name="eye"></ion-icon>
                             </button>
@@ -186,19 +197,35 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         jQuery(document).ready(function($) {
-            var currencySymbol = '{{ config("settings.currency_symbol") }}';
+            var currencySymbol = @json(config('settings.currency_symbol'));
+            var businessName = @json('Musa Jan Frozen Foods');
+            var logoUrl = @json(asset('images/logo.png'));
+            var receiptFooter = @json(config('settings.receipt_footer', 'Thank you for shopping with Musa Jan Frozen Foods.'));
+
+            function escapeHtml(value) {
+                return String(value ?? '').replace(/[&<>"']/g, function(match) {
+                    return {
+                        '&': '&amp;',
+                        '<': '&lt;',
+                        '>': '&gt;',
+                        '"': '&quot;',
+                        "'": '&#039;'
+                    }[match];
+                });
+            }
 
             // Invoice Modal
             $(document).on('click', '.btnShowInvoice', function() {
                 var button = $(this);
                 var orderId = button.data('order-id');
                 var customerName = button.data('customer-name');
+                var customerMobile = button.data('customer-mobile') || 'N/A';
                 var totalAmount = button.data('total');
                 var receivedAmount = button.data('received');
+                var discountAmount = button.data('discount') || 0;
+                var balanceAmount = button.data('balance') || Math.max(totalAmount - receivedAmount, 0);
                 var createdAt = button.data('created-at');
                 var items = button.data('items');
-
-                console.log('Items:', items);
 
                 var statusBadge = '';
                 if (receivedAmount == 0) {
@@ -212,36 +239,38 @@
                 var itemsHTML = '';
                 if (items && Array.isArray(items) && items.length > 0) {
                     items.forEach(function(item, index) {
-                        var product = item.product || {};
-                        var unitPrice = product.price || 0;
-                        var quantity = item.quantity || 0;
-                        var itemTotal = item.price || 0;
-
                         itemsHTML += '<tr>' +
                             '<td>' + (index + 1) + '</td>' +
-                            '<td>' + (product.name || 'N/A') + '</td>' +
-                            '<td>-</td>' +
-                            '<td>' + currencySymbol + ' ' + parseFloat(unitPrice).toFixed(2) + '</td>' +
-                            '<td>' + quantity + '</td>' +
-                            '<td>' + currencySymbol + ' ' + parseFloat(itemTotal).toFixed(2) + '</td>' +
+                            '<td>' + escapeHtml(item.name || 'N/A') + '</td>' +
+                            '<td>' + parseFloat(item.quantity || 0).toFixed(2) + '</td>' +
+                            '<td>' + currencySymbol + ' ' + parseFloat(item.rate || 0).toFixed(2) + '</td>' +
+                            '<td>' + currencySymbol + ' ' + parseFloat(item.total || 0).toFixed(2) + '</td>' +
                             '</tr>';
                     });
                 } else {
-                    itemsHTML = '<tr><td colspan="6" class="text-center">No items found</td></tr>';
+                    itemsHTML = '<tr><td colspan="5" class="text-center">No items found</td></tr>';
                 }
 
                 var modalBody = $('#modalInvoice').find('.modal-body');
                 modalBody.html(
                     '<div class="card">' +
-                    '<div class="card-header">' +
-                    'Invoice <strong>#' + orderId + '</strong>' +
-                    '<span class="float-right"><strong>Status:</strong> ' + statusBadge + '</span>' +
-                    '</div>' +
                     '<div class="card-body">' +
+                    '<div class="text-center mb-3">' +
+                    '<img src="' + logoUrl + '" alt="' + businessName + ' logo" style="max-width:72px;margin-bottom:8px;">' +
+                    '<h4 class="mb-1">' + businessName + '</h4>' +
+                    '<div class="text-muted">Sales Invoice</div>' +
+                    '</div>' +
+                    '<div class="d-flex justify-content-between align-items-center border-top border-bottom py-2 mb-3">' +
+                    '<div>Invoice <strong>#' + orderId + '</strong></div>' +
+                    '<div><strong>Status:</strong> ' + statusBadge + '</div>' +
+                    '</div>' +
                     '<div class="row mb-4">' +
                     '<div class="col-sm-6">' +
-                    '<h6 class="mb-3">To: <strong>' + customerName + '</strong></h6>' +
-                    '<div>Date: ' + createdAt + '</div>' +
+                    '<div><strong>Customer Name:</strong> ' + escapeHtml(customerName) + '</div>' +
+                    '<div><strong>Mobile Number:</strong> ' + escapeHtml(customerMobile) + '</div>' +
+                    '</div>' +
+                    '<div class="col-sm-6 text-sm-right mt-2 mt-sm-0">' +
+                    '<div><strong>Date &amp; Time:</strong> ' + escapeHtml(createdAt) + '</div>' +
                     '</div>' +
                     '</div>' +
                     '<div class="table-responsive">' +
@@ -249,30 +278,34 @@
                     '<thead>' +
                     '<tr>' +
                     '<th>#</th>' +
-                    '<th>Item</th>' +
-                    '<th>Description</th>' +
-                    '<th>Unit Cost</th>' +
-                    '<th>Qty</th>' +
+                    '<th>Product</th>' +
+                    '<th>Quantity</th>' +
+                    '<th>Rate</th>' +
                     '<th>Total</th>' +
                     '</tr>' +
                     '</thead>' +
                     '<tbody>' + itemsHTML + '</tbody>' +
                     '<tfoot>' +
                     '<tr>' +
-                    '<th colspan="5" class="text-right">Total</th>' +
+                    '<th colspan="4" class="text-right">Discount</th>' +
+                    '<th>-' + currencySymbol + ' ' + parseFloat(discountAmount).toFixed(2) + '</th>' +
+                    '</tr>' +
+                    '<tr>' +
+                    '<th colspan="4" class="text-right">Grand Total</th>' +
                     '<th>' + currencySymbol + ' ' + parseFloat(totalAmount).toFixed(2) + '</th>' +
                     '</tr>' +
                     '<tr>' +
-                    '<th colspan="5" class="text-right">Paid</th>' +
+                    '<th colspan="4" class="text-right">Paid Amount</th>' +
                     '<th>' + currencySymbol + ' ' + parseFloat(receivedAmount).toFixed(2) + '</th>' +
                     '</tr>' +
                     '<tr>' +
-                    '<th colspan="5" class="text-right">Balance</th>' +
-                    '<th>' + currencySymbol + ' ' + parseFloat(totalAmount - receivedAmount).toFixed(2) + '</th>' +
+                    '<th colspan="4" class="text-right">Remaining Balance</th>' +
+                    '<th>' + currencySymbol + ' ' + parseFloat(balanceAmount).toFixed(2) + '</th>' +
                     '</tr>' +
                     '</tfoot>' +
                     '</table>' +
                     '</div>' +
+                    '<p class="text-center mb-0">' + escapeHtml(receiptFooter) + '</p>' +
                     '</div>' +
                     '</div>'
                 );

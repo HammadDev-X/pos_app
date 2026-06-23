@@ -60,6 +60,42 @@ test('user can create a completed purchase', function () {
     expect($this->product->fresh()->quantity)->toBeInt()->toBe(102);
 });
 
+test('purchase total includes transport and other purchase costs', function () {
+    actingAs($this->user)
+        ->post(route('purchases.store'), [
+            'supplier_id' => $this->supplier->id,
+            'purchase_date' => now()->format('Y-m-d'),
+            'total_amount' => 1.00,
+            'transport_cost' => 25.00,
+            'other_cost' => 10.00,
+            'status' => 'completed',
+            'items' => [
+                [
+                    'product_id' => $this->product->id,
+                    'quantity' => 2,
+                    'purchase_price' => 50.00,
+                    'expiry_date' => now()->addMonth()->format('Y-m-d'),
+                ]
+            ]
+        ])
+        ->assertRedirect(route('purchases.index'))
+        ->assertSessionHas('success');
+
+    assertDatabaseHas('purchases', [
+        'supplier_id' => $this->supplier->id,
+        'transport_cost' => 25.00,
+        'other_cost' => 10.00,
+        'total_amount' => 135.00,
+    ]);
+
+    assertDatabaseHas('purchase_items', [
+        'product_id' => $this->product->id,
+        'quantity' => 2,
+        'purchase_price' => 50.00,
+        'expiry_date' => now()->addMonth()->format('Y-m-d') . ' 00:00:00',
+    ]);
+});
+
 test('user can create a pending purchase', function () {
     $initialStock = $this->product->quantity;
 

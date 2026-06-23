@@ -13,19 +13,34 @@
 <div class="container-fluid dashboard-page">
     <div class="dashboard-metrics">
         <a href="{{ route('orders.index') }}" class="metric-card metric-sales">
-            <span>{{ __('dashboard.Income_Today') }}</span>
+            <span>Today’s Sales</span>
             <strong>{{ config('settings.currency_symbol') }} {{ number_format($income_today, 2) }}</strong>
             <small>{{ __('dashboard.today_sales_hint') }}</small>
         </a>
-        <a href="{{ route('orders.index') }}" class="metric-card metric-orders">
-            <span>{{ __('dashboard.Orders_Count') }}</span>
-            <strong>{{ $orders_count }}</strong>
-            <small>{{ $unpaid_orders_count }} {{ __('dashboard.open_balances') }}</small>
-        </a>
         <a href="{{ route('reports.business') }}" class="metric-card metric-sales">
-            <span>This Month's Sales</span>
+            <span>This Month’s Sales</span>
             <strong>{{ config('settings.currency_symbol') }} {{ number_format($sales_this_month, 2) }}</strong>
-            <small>{{ config('settings.currency_symbol') }} {{ number_format($cash_sales, 2) }} cash received</small>
+            <small>Month-to-date invoice total</small>
+        </a>
+        <a href="{{ route('orders.index') }}" class="metric-card metric-orders">
+            <span>Total Invoices</span>
+            <strong>{{ $orders_count }}</strong>
+            <small>{{ $unpaid_orders_count }} open balances</small>
+        </a>
+        <a href="{{ route('orders.index') }}" class="metric-card metric-cash">
+            <span>Cash Sales</span>
+            <strong>{{ config('settings.currency_symbol') }} {{ number_format($cash_sales, 2) }}</strong>
+            <small>Payments received by cash</small>
+        </a>
+        <a href="{{ route('customers.index') }}" class="metric-card metric-credit">
+            <span>Credit Sales</span>
+            <strong>{{ config('settings.currency_symbol') }} {{ number_format($credit_sales, 2) }}</strong>
+            <small>Outstanding customer balances</small>
+        </a>
+        <a href="{{ route('orders.index') }}" class="metric-card metric-recovery">
+            <span>Credit Recovery</span>
+            <strong>{{ config('settings.currency_symbol') }} {{ number_format((float) $recovery_payments, 2) }}</strong>
+            <small>Received payments after invoice date</small>
         </a>
         <a href="{{ route('customers.index') }}" class="metric-card metric-orders">
             <span>Total Receivable</span>
@@ -49,11 +64,90 @@
         </a>
     </div>
 
+    <div class="dashboard-ledger-grid">
+        <div class="card table-card ledger-card">
+            <div class="card-header">
+                <h3 class="card-title">Expense Management</h3>
+            </div>
+            <div class="card-body">
+                <div class="ledger-metrics">
+                    <a href="{{ route('expenses.index') }}" class="ledger-metric ledger-total">
+                        <span>Total Expenses</span>
+                        <strong>{{ config('settings.currency_symbol') }} {{ number_format($total_expenses, 2) }}</strong>
+                    </a>
+                    <a href="{{ route('expenses.index', ['category' => 'Petrol']) }}" class="ledger-metric">
+                        <span>Petrol Expense</span>
+                        <strong>{{ config('settings.currency_symbol') }} {{ number_format($petrol_expense, 2) }}</strong>
+                    </a>
+                    <a href="{{ route('expenses.index', ['category' => 'Packaging']) }}" class="ledger-metric">
+                        <span>Packaging Expense</span>
+                        <strong>{{ config('settings.currency_symbol') }} {{ number_format($packaging_expense, 2) }}</strong>
+                    </a>
+                    <a href="{{ route('expenses.index', ['category' => 'Delivery']) }}" class="ledger-metric">
+                        <span>Delivery Expense</span>
+                        <strong>{{ config('settings.currency_symbol') }} {{ number_format($delivery_expense, 2) }}</strong>
+                    </a>
+                    <a href="{{ route('expenses.index', ['category' => 'Salary']) }}" class="ledger-metric">
+                        <span>Salary Expense</span>
+                        <strong>{{ config('settings.currency_symbol') }} {{ number_format($salary_expense, 2) }}</strong>
+                    </a>
+                    <a href="{{ route('expenses.index') }}" class="ledger-metric">
+                        <span>Other Expenses</span>
+                        <strong>{{ config('settings.currency_symbol') }} {{ number_format($other_expenses, 2) }}</strong>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card table-card ledger-card">
+            <div class="card-header">
+                <h3 class="card-title">Customer Management & Ledger</h3>
+            </div>
+            <div class="card-body">
+                <div class="ledger-metrics customer-ledger-metrics">
+                    <a href="{{ route('customers.index') }}" class="ledger-metric ledger-total">
+                        <span>Total Customers</span>
+                        <strong>{{ $customers_count }}</strong>
+                    </a>
+                    <a href="{{ route('customers.index') }}" class="ledger-metric">
+                        <span>Active Customers</span>
+                        <strong>{{ $active_customers_count }}</strong>
+                    </a>
+                    <a href="{{ route('customers.index') }}" class="ledger-metric">
+                        <span>Customers with Pending Balance</span>
+                        <strong>{{ $customers_with_balance_count }}</strong>
+                    </a>
+                    <a href="{{ route('customers.index') }}" class="ledger-metric receivable-metric">
+                        <span>Total Receivable Amount (total udhaar)</span>
+                        <strong>{{ config('settings.currency_symbol') }} {{ number_format($total_receivable, 2) }}</strong>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row">
         <div class="col-xl-8">
             <div class="card table-card">
-                <div class="card-header"><h3 class="card-title">Monthly Sales Calendar</h3></div>
+                <div class="card-header"><h3 class="card-title">Monthly Sales Calendar / Day-wise Sales Graph</h3></div>
                 <div class="card-body">
+                    @php
+                        $maxMonthlySales = max((float) collect($monthly_calendar)->max('sales'), 1);
+                    @endphp
+                    <div class="monthly-sales-chart">
+                        @foreach($monthly_calendar as $day)
+                            @php
+                                $salesAmount = (float) $day['sales'];
+                                $barHeight = max(($salesAmount / $maxMonthlySales) * 100, $salesAmount > 0 ? 8 : 0);
+                            @endphp
+                            <div class="sales-bar" title="{{ $day['date'] }}: {{ config('settings.currency_symbol') }} {{ number_format($salesAmount, 2) }}">
+                                <div class="sales-bar-track">
+                                    <span style="height: {{ $barHeight }}%"></span>
+                                </div>
+                                <small>{{ $day['day'] }}</small>
+                            </div>
+                        @endforeach
+                    </div>
                     <div class="monthly-sales-grid">
                         @foreach($monthly_calendar as $day)
                             <div class="monthly-sales-day {{ $day['sales'] > 0 ? 'has-sales' : '' }}">

@@ -74,14 +74,19 @@ class PurchaseController extends Controller
         try {
             DB::beginTransaction();
 
+            $itemsTotal = collect($request->items)
+                ->sum(fn (array $item): float => ((float) $item['quantity']) * ((float) $item['purchase_price']));
+            $transportCost = (float) $request->input('transport_cost', 0);
+            $otherCost = (float) $request->input('other_cost', 0);
+
             // Create purchase
             $purchase = Purchase::create([
                 'supplier_id' => $request->supplier_id,
                 'user_id' => Auth::id(),
                 'purchase_date' => $request->purchase_date,
-                'total_amount' => $request->total_amount,
-                'transport_cost' => $request->input('transport_cost', 0),
-                'other_cost' => $request->input('other_cost', 0),
+                'total_amount' => $itemsTotal + $transportCost + $otherCost,
+                'transport_cost' => $transportCost,
+                'other_cost' => $otherCost,
                 'status' => $request->status ?? 'pending',
                 'notes' => $request->notes,
             ]);
@@ -97,7 +102,7 @@ class PurchaseController extends Controller
 
                 // If status is completed, update stock and purchase price
                 if ($request->status === 'completed') {
-                    $product = Product::find($item['product_id']);
+                    $product = Product::lockForUpdate()->findOrFail($item['product_id']);
                     $product->quantity += $item['quantity'];
                     $product->purchase_price = $item['purchase_price'];
                     $product->save();

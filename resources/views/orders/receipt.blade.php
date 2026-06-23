@@ -8,6 +8,8 @@
 </head>
 <body class="receipt-page">
     @php
+        $businessName = 'Musa Jan Frozen Foods';
+        $customerMobile = $order->customer?->phone ?: 'N/A';
         $gross = $order->grossTotal();
         $returned = $order->returnedAmount();
         $discount = $order->discountAmount();
@@ -18,8 +20,9 @@
 
     <main class="receipt">
         <header class="receipt-header">
-            <img src="{{ asset('images/logo.png') }}" alt="Musa Jan Frozen Foods" style="max-width: 72px; margin-bottom: 8px;">
-            <h1>{{ config('settings.app_name', 'Musa Jan Frozen Foods') }}</h1>
+            <img src="{{ asset('images/logo.png') }}" alt="{{ $businessName }} logo" style="max-width: 72px; margin-bottom: 8px;">
+            <h1>{{ $businessName }}</h1>
+            <p>Sales Invoice</p>
             @if(config('settings.shop_address'))
                 <p>{{ config('settings.shop_address') }}</p>
             @endif
@@ -33,7 +36,7 @@
 
         <section class="receipt-meta">
             <div>
-                <span>Receipt</span>
+                <span>Invoice</span>
                 <strong>#{{ $order->id }}</strong>
             </div>
             <div>
@@ -41,11 +44,15 @@
                 <strong>{{ optional($order->user)->name }}</strong>
             </div>
             <div>
-                <span>Customer</span>
-                <strong>{{ $order->getCustomerName() }}{{ $order->customer?->phone ? ' - ' . $order->customer->phone : '' }}</strong>
+                <span>Customer Name</span>
+                <strong>{{ $order->getCustomerName() }}</strong>
             </div>
             <div>
-                <span>Date</span>
+                <span>Mobile Number</span>
+                <strong>{{ $customerMobile }}</strong>
+            </div>
+            <div>
+                <span>Date &amp; Time</span>
                 <strong>{{ $order->created_at->format('M d, Y h:i A') }}</strong>
             </div>
         </section>
@@ -53,9 +60,9 @@
         <table class="receipt-table">
             <thead>
                 <tr>
-                    <th>Item</th>
-                    <th>Qty</th>
-                    <th>Price</th>
+                    <th>Product</th>
+                    <th>Quantity</th>
+                    <th>Rate</th>
                     <th>Total</th>
                 </tr>
             </thead>
@@ -76,12 +83,10 @@
             @if($returned > 0)
                 <div><span>Returned</span><strong>-{{ config('settings.currency_symbol') }} {{ number_format($returned, 2) }}</strong></div>
             @endif
-            @if($discount > 0)
-                <div><span>Discount</span><strong>-{{ config('settings.currency_symbol') }} {{ number_format($discount, 2) }}</strong></div>
-            @endif
+            <div><span>Discount</span><strong>-{{ config('settings.currency_symbol') }} {{ number_format($discount, 2) }}</strong></div>
             <div><span>Grand Total</span><strong>{{ config('settings.currency_symbol') }} {{ number_format($total, 2) }}</strong></div>
-            <div><span>Paid</span><strong>{{ config('settings.currency_symbol') }} {{ number_format($received, 2) }}</strong></div>
-            <div><span>Balance</span><strong>{{ config('settings.currency_symbol') }} {{ number_format($balance, 2) }}</strong></div>
+            <div><span>Paid Amount</span><strong>{{ config('settings.currency_symbol') }} {{ number_format($received, 2) }}</strong></div>
+            <div><span>Remaining Balance</span><strong>{{ config('settings.currency_symbol') }} {{ number_format($balance, 2) }}</strong></div>
         </section>
 
         <section class="receipt-payments">
@@ -95,7 +100,7 @@
         </section>
 
         <footer class="receipt-footer">
-            <p>{{ config('settings.receipt_footer', 'Thank you for your purchase.') }}</p>
+            <p>{{ config('settings.receipt_footer', 'Thank you for shopping with Musa Jan Frozen Foods.') }}</p>
             <button type="button" class="btn btn-primary" onclick="window.print()">Print</button>
         </footer>
     </main>

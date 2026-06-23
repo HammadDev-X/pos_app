@@ -43,7 +43,7 @@ class ProductUpdateRequest extends FormRequest
             'purchase_price' => ['nullable', 'numeric', 'min:0', 'decimal:0,2'],
             'quantity' => ['nullable', 'numeric', 'min:0'],
             'minimum_stock_level' => ['nullable', 'numeric', 'min:0'],
-            'unit' => ['nullable', 'string', 'max:20'],
+            'unit' => ['nullable', 'string', 'in:pack,kg,piece,carton'],
             'track_stock' => ['nullable', 'boolean'],
             'is_quick_item' => ['nullable', 'boolean'],
             
@@ -71,7 +71,7 @@ class ProductUpdateRequest extends FormRequest
             $this->merge(['short_code' => null]);
         }
         if (!$this->has('unit')) {
-            $this->merge(['unit' => 'pcs']);
+            $this->merge(['unit' => 'piece']);
         }
         if (!$this->has('track_stock')) {
             $this->merge(['track_stock' => true]);

@@ -67,6 +67,12 @@
                                 <strong class="text-lg">{{ config('settings.currency_symbol') }}{{ number_format($purchase->total_amount, 2) }}</strong>
                             </dd>
 
+                            <dt class="col-sm-5">{{ __('Transport / Delivery') }}</dt>
+                            <dd class="col-sm-7">{{ config('settings.currency_symbol') }}{{ number_format((float) $purchase->transport_cost, 2) }}</dd>
+
+                            <dt class="col-sm-5">{{ __('Other Purchase Cost') }}</dt>
+                            <dd class="col-sm-7">{{ config('settings.currency_symbol') }}{{ number_format((float) $purchase->other_cost, 2) }}</dd>
+
                             <dt class="col-sm-5">{{ __('Created By') }}</dt>
                             <dd class="col-sm-7">{{ $purchase->user->name ?? 'N/A' }}</dd>
 
@@ -142,8 +148,9 @@
                                 <tr>
                                     <th width="60">{{ __('Image') }}</th>
                                     <th>{{ __('Product Name') }}</th>
-                                    <th width="100" class="text-center">{{ __('Quantity') }}</th>
-                                    <th width="120" class="text-right">{{ __('Unit Price') }}</th>
+                                    <th width="100" class="text-center">{{ __('Quantity Added') }}</th>
+                                    <th width="120" class="text-right">{{ __('Purchase Cost') }}</th>
+                                    <th width="120" class="text-center">{{ __('Expiry Date') }}</th>
                                     <th width="120" class="text-right">{{ __('Subtotal') }}</th>
                                 </tr>
                                 </thead>
@@ -174,13 +181,16 @@
                                         <td class="text-right">
                                             {{ config('settings.currency_symbol') }}{{ number_format($item->purchase_price, 2) }}
                                         </td>
+                                        <td class="text-center">
+                                            {{ $item->expiry_date ? $item->expiry_date->format('Y-m-d') : '-' }}
+                                        </td>
                                         <td class="text-right">
                                             <strong>{{ config('settings.currency_symbol') }}{{ number_format($item->subtotal, 2) }}</strong>
                                         </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="5" class="text-center text-muted py-4">
+                                        <td colspan="6" class="text-center text-muted py-4">
                                             {{ __('No items in this purchase') }}
                                         </td>
                                     </tr>
@@ -189,7 +199,7 @@
                                 @if($purchase->items->count() > 0)
                                     <tfoot>
                                     <tr class="bg-light">
-                                        <td colspan="4" class="text-right">
+                                        <td colspan="5" class="text-right">
                                             <strong>{{ __('Total') }}:</strong>
                                         </td>
                                         <td class="text-right">

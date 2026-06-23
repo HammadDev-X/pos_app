@@ -201,3 +201,79 @@ describe('Partial Payment', function () {
             ->assertSessionHasErrors();
     });
 });
+
+describe('Sales Return / Invoice Cancellation', function () {
+    test('partial product return adds stock back and adjusts customer balance', function () {
+        $product = Product::factory()->create([
+            'price' => 50,
+            'purchase_price' => 30,
+            'quantity' => 7,
+            'track_stock' => true,
+        ]);
+        $order = Order::factory()->create(['user_id' => $this->user->id]);
+        $item = $order->items()->create([
+            'price' => 150,
+            'quantity' => 3,
+            'unit_cost' => 30,
+            'product_id' => $product->id,
+        ]);
+        $order->payments()->create(['amount' => 50, 'user_id' => $this->user->id]);
+
+        expect($order->remainingBalance())->toBe(100.0);
+
+        $this->post(route('orders.return.store', $order), [
+            'type' => 'partial',
+            'reason' => 'Customer returned one pack',
+            'items' => [$item->id => 1],
+        ])->assertRedirect(route('orders.index'))
+            ->assertSessionHas('success');
+
+        $order->refresh()->load(['items', 'payments']);
+        $product->refresh();
+
+        expect((float) $item->refresh()->returned_quantity)->toBe(1.0)
+            ->and((float) $product->quantity)->toBe(8.0)
+            ->and($order->total())->toBe(100.0)
+            ->and($order->remainingBalance())->toBe(50.0)
+            ->and($order->costOfGoodsSold())->toBe(60.0);
+    });
+
+    test('full invoice return cancels invoice and removes it from net sales report', function () {
+        $product = Product::factory()->create([
+            'price' => 100,
+            'purchase_price' => 70,
+            'quantity' => 4,
+            'track_stock' => true,
+        ]);
+        $order = Order::factory()->create(['user_id' => $this->user->id]);
+        $item = $order->items()->create([
+            'price' => 200,
+            'quantity' => 2,
+            'unit_cost' => 70,
+            'product_id' => $product->id,
+        ]);
+        $order->payments()->create(['amount' => 100, 'user_id' => $this->user->id]);
+
+        $this->post(route('orders.return.store', $order), [
+            'type' => 'full',
+            'reason' => 'Invoice cancellation',
+            'items' => [$item->id => 0],
+        ])->assertRedirect(route('orders.index'))
+            ->assertSessionHas('success');
+
+        $order->refresh()->load(['items', 'payments']);
+        $product->refresh();
+
+        expect($order->isCancelled())->toBeTrue()
+            ->and($order->returnedAmount())->toBe(200.0)
+            ->and($order->total())->toBe(0.0)
+            ->and((float) $product->quantity)->toBe(6.0);
+
+        $this->get(route('reports.business', [
+            'date_from' => now()->toDateString(),
+            'date_to' => now()->toDateString(),
+        ]))->assertViewHas('sales', 0.0)
+            ->assertViewHas('grossProfit', 0.0)
+            ->assertViewHas('topProducts', fn ($products) => $products->isEmpty());
+    });
+});

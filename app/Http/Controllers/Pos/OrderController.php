@@ -192,7 +192,7 @@ class OrderController extends Controller
         $data = $request->validate([
             'reason' => ['required', 'string', 'max:255'],
             'type' => ['required', 'in:partial,full'],
-            'items' => ['required', 'array'],
+            'items' => ['nullable', 'array'],
             'items.*' => ['nullable', 'numeric', 'min:0'],
         ]);
 

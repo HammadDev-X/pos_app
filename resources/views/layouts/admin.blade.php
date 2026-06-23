@@ -8,10 +8,6 @@
     <title>@yield('title', config('app.name'))</title>
     <!-- Tell the browser to be responsive to screen width -->
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- Google Font: Source Sans Pro -->
-    <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700" rel="stylesheet">
-
-
     @vite(['resources/sass/app.scss', 'resources/js/app.js'])
     @yield('css')
     @stack('styles')
@@ -23,7 +19,7 @@
     </script>
 </head>
 
-<body class="hold-transition sidebar-mini">
+<body class="hold-transition sidebar-mini pos-admin-shell">
     <!-- Site wrapper -->
     <div class="wrapper">
 
