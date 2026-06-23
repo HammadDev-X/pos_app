@@ -55,6 +55,8 @@ class Purchase extends Model
         'user_id',
         'purchase_date',
         'total_amount',
+        'transport_cost',
+        'other_cost',
         'status',
         'notes',
     ];
@@ -63,6 +65,8 @@ class Purchase extends Model
     {
         return [
             'total_amount' => 'decimal:2',
+            'transport_cost' => 'decimal:2',
+            'other_cost' => 'decimal:2',
             'purchase_date' => 'date',
         ];
     }

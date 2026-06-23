@@ -4,32 +4,34 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class StockAdjustment extends Model
+class OrderReturn extends Model
 {
     protected $fillable = [
-        'product_id',
+        'order_id',
         'user_id',
         'type',
-        'quantity',
-        'quantity_before',
-        'quantity_after',
         'reason',
+        'total_amount',
     ];
 
     protected $casts = [
-        'quantity' => 'decimal:2',
-        'quantity_before' => 'decimal:2',
-        'quantity_after' => 'decimal:2',
+        'total_amount' => 'decimal:2',
     ];
 
-    public function product(): BelongsTo
+    public function order(): BelongsTo
     {
-        return $this->belongsTo(Product::class);
+        return $this->belongsTo(Order::class);
     }
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function items(): HasMany
+    {
+        return $this->hasMany(OrderReturnItem::class);
     }
 }

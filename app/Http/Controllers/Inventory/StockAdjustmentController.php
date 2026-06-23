@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Inventory;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\Product;
 use App\Models\StockAdjustment;
 use Illuminate\Http\RedirectResponse;
@@ -39,7 +40,7 @@ class StockAdjustmentController extends Controller
         $data = $request->validate([
             'product_id' => ['required', 'exists:products,id'],
             'type' => ['required', 'in:increase,decrease,set'],
-            'quantity' => ['required', 'integer', 'min:0'],
+            'quantity' => ['required', 'numeric', 'min:0'],
             'reason' => ['required', 'string', 'max:255'],
         ]);
 
@@ -62,6 +63,14 @@ class StockAdjustmentController extends Controller
                 'quantity' => $data['quantity'],
                 'quantity_before' => $before,
                 'quantity_after' => $after,
+                'reason' => $data['reason'],
+            ]);
+
+            AuditLog::record('stock.adjusted', $product, [
+                'type' => $data['type'],
+                'quantity' => (float) $data['quantity'],
+                'before' => (float) $before,
+                'after' => (float) $after,
                 'reason' => $data['reason'],
             ]);
         });

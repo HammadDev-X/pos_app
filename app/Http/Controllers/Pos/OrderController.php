@@ -5,9 +5,13 @@ namespace App\Http\Controllers\Pos;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Order\OrderStoreRequest;
 use App\Http\Requests\Order\PartialPaymentRequest;
+use App\Models\AuditLog;
 use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\View\View;
 
 class OrderController extends Controller
 {
@@ -38,12 +42,17 @@ class OrderController extends Controller
                 $order = Order::create([
                     'customer_id' => $request->customer_id,
                     'user_id' => $request->user()->id,
+                    'discount' => $request->input('discount', 0),
+                    'due_date' => $request->input('due_date'),
+                    'status' => 'active',
                 ]);
 
                 // Get cart items
                 $cartItems = $request->user()->cart()->get();
+                $customItems = collect($request->input('custom_items', []))
+                    ->filter(fn (array $item): bool => filled($item['name'] ?? null));
 
-                if ($cartItems->isEmpty()) {
+                if ($cartItems->isEmpty() && $customItems->isEmpty()) {
                     throw new \Exception(__('cart.empty'));
                 }
 
@@ -51,6 +60,10 @@ class OrderController extends Controller
                 foreach ($cartItems as $item) {
                     $this->createOrderItem($order, $item);
                     $this->reduceProductStock($item);
+                }
+
+                foreach ($customItems as $item) {
+                    $this->createCustomOrderItem($order, $item);
                 }
 
                 // Clear cart
@@ -61,6 +74,12 @@ class OrderController extends Controller
                     'amount' => $request->amount,
                     'method' => $request->payment_method,
                     'user_id' => $request->user()->id,
+                ]);
+
+                AuditLog::record('order.created', $order, [
+                    'total' => $order->total(),
+                    'paid' => (float) $request->amount,
+                    'payment_method' => $request->payment_method,
                 ]);
 
                 return $order;
@@ -102,6 +121,11 @@ class OrderController extends Controller
                 'method' => $request->payment_method,
                 'user_id' => auth()->id(),
             ]);
+
+            AuditLog::record('payment.received', $order, [
+                'amount' => (float) $request->amount,
+                'payment_method' => $request->payment_method,
+            ]);
         });
 
         return redirect()->route('orders.index')
@@ -118,7 +142,22 @@ class OrderController extends Controller
         $order->items()->create([
             'price' => $item->price * $item->pivot->quantity,
             'quantity' => $item->pivot->quantity,
+            'unit_cost' => $item->purchase_price ?? 0,
             'product_id' => $item->id,
+        ]);
+    }
+
+    private function createCustomOrderItem(Order $order, array $item): void
+    {
+        $quantity = (float) $item['quantity'];
+        $unitPrice = (float) $item['price'];
+
+        $order->items()->create([
+            'custom_item_name' => $item['name'],
+            'price' => $unitPrice * $quantity,
+            'quantity' => $quantity,
+            'unit_cost' => 0,
+            'product_id' => null,
         ]);
     }
 
@@ -127,6 +166,116 @@ class OrderController extends Controller
      */
     private function reduceProductStock($item): void
     {
-        $item->decrement('quantity', $item->pivot->quantity);
+        $product = Product::whereKey($item->id)->lockForUpdate()->firstOrFail();
+        $quantity = (float) $item->pivot->quantity;
+
+        if (!$product->track_stock) {
+            return;
+        }
+
+        if ((float) $product->quantity < $quantity) {
+            throw new \Exception(__('cart.available', ['quantity' => $product->quantity]));
+        }
+
+        $product->decrement('quantity', $quantity);
+    }
+
+    public function returnForm(Order $order): View
+    {
+        $order->load(['customer', 'items.product', 'payments', 'returns.items']);
+
+        return view('orders.return', ['order' => $order]);
+    }
+
+    public function processReturn(Request $request, Order $order): \Illuminate\Http\RedirectResponse
+    {
+        $data = $request->validate([
+            'reason' => ['required', 'string', 'max:255'],
+            'type' => ['required', 'in:partial,full'],
+            'items' => ['required', 'array'],
+            'items.*' => ['nullable', 'numeric', 'min:0'],
+        ]);
+
+        try {
+            DB::transaction(function () use ($order, $data, $request): void {
+                $order = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+                $order->load('items.product');
+
+                $return = $order->returns()->create([
+                    'user_id' => $request->user()->id,
+                    'type' => $data['type'],
+                    'reason' => $data['reason'],
+                    'total_amount' => 0,
+                ]);
+
+                $totalReturnAmount = 0;
+
+                foreach ($order->items as $item) {
+                    $requestedQuantity = $data['type'] === 'full'
+                        ? $item->returnableQuantity()
+                        : (float) ($data['items'][$item->id] ?? 0);
+
+                    if ($requestedQuantity <= 0) {
+                        continue;
+                    }
+
+                    if ($requestedQuantity > $item->returnableQuantity()) {
+                        throw new \Exception("Return quantity is higher than sold quantity for {$this->itemName($item)}.");
+                    }
+
+                    $unitPrice = $item->unitPrice();
+                    $lineTotal = $unitPrice * $requestedQuantity;
+
+                    $return->items()->create([
+                        'order_item_id' => $item->id,
+                        'product_id' => $item->product_id,
+                        'quantity' => $requestedQuantity,
+                        'unit_price' => $unitPrice,
+                        'unit_cost' => $item->unit_cost,
+                        'total_amount' => $lineTotal,
+                    ]);
+
+                    $item->increment('returned_quantity', $requestedQuantity);
+
+                    if ($item->product_id && $item->product?->track_stock) {
+                        Product::whereKey($item->product_id)->lockForUpdate()->increment('quantity', $requestedQuantity);
+                    }
+
+                    $totalReturnAmount += $lineTotal;
+                }
+
+                if ($totalReturnAmount <= 0) {
+                    throw new \Exception('Select at least one item quantity to return.');
+                }
+
+                $return->update(['total_amount' => $totalReturnAmount]);
+
+                $order->refresh()->load('items');
+                $order->update([
+                    'status' => $order->items->sum(fn (OrderItem $item): float => $item->returnableQuantity()) <= 0
+                        ? 'cancelled'
+                        : 'active',
+                ]);
+
+                AuditLog::record('order.returned', $order, [
+                    'return_id' => $return->id,
+                    'type' => $return->type,
+                    'reason' => $return->reason,
+                    'amount' => $totalReturnAmount,
+                ]);
+            });
+
+            return redirect()->route('orders.index')
+                ->with('success', __('Return processed successfully. Stock, customer balance, sales, and profit reports were adjusted.'));
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', $e->getMessage())
+                ->withInput();
+        }
+    }
+
+    private function itemName(OrderItem $item): string
+    {
+        return $item->product?->name ?? $item->custom_item_name ?? 'item';
     }
 }

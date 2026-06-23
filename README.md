@@ -1,180 +1,92 @@
-<p align="center">
-    <h1 align="center">POS System Using Laravel</h1>
-</p>
+# Musa Jan Frozen Foods POS
 
-The project was created while recording video "[Create POS System Using Laravel](https://www.youtube.com/watch?v=Y_NRk0lOOJc&list=PL2hV0q47BY-G9f5xG9Vq-wGjSyy1BekOv)"
+Laravel POS for sales, invoices, inventory, purchases, expenses, customer ledger, recovery payments, returns, and profit reports.
 
-## Installation
+## Requirements
 
-### Requirements
+- PHP 8.2+
+- Composer
+- Node.js 18+ and npm
+- MySQL or MariaDB
+- PHP extensions: `bcmath`, `ctype`, `fileinfo`, `gd`, `json`, `mbstring`, `openssl`, `pdo`, `pdo_mysql`, `tokenizer`, `xml`, `zip`
 
-For system requirements you [Check Laravel Requirement](https://laravel.com/docs/10.x/deployment#server-requirements)
+## First-Time Setup
 
-### Clone the repository from github.
+```bash
+git clone <repo-url>
+cd laravel-pos
 
-    git clone https://github.com/angkosal/laravel-pos.git [YourDirectoryName]
+composer install
+npm install
 
-The command installs the project in a directory named `YourDirectoryName`. You can choose a different
-directory name if you want.
+cp .env.example .env
+php artisan key:generate
+```
 
-### Install dependencies
+Create a database, then update `.env`:
 
-Laravel utilizes [Composer](https://getcomposer.org/) to manage its dependencies. So, before using Laravel, make sure you have Composer installed on your machine.
+```env
+APP_NAME="Musa Jan Frozen Foods"
+APP_URL=http://127.0.0.1:8000
 
-    cd YourDirectoryName
-    composer install
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=laravel_pos
+DB_USERNAME=root
+DB_PASSWORD=
+```
 
-### Config file
+Finish setup:
 
-Rename or copy `.env.example` file to `.env` 1.`php artisan key:generate` to generate app key.
+```bash
+php artisan migrate --seed
+php artisan storage:link
+npm run build
+php artisan serve
+```
 
-1. Set your database credentials in your `.env` file
-1. Set your `APP_URL` in your `.env` file.
+Open `http://127.0.0.1:8000`.
 
-### Database
+Default seeded login:
 
-1. Migrate database table `php artisan migrate`
-1. `php artisan db:seed`, this will initialize settings and create and admin user for you [email: admin@gmail.com - password: admin123]
+```text
+Email: admin@gmail.com
+Password: admin123
+```
 
-### Install Node Dependencies
+## Daily Development
 
-1. `npm install` to install node dependencies
-1. `npm run dev` for development or `npm run build` for production
+Run these in two terminals:
 
-### Create storage link
+```bash
+php artisan serve
+```
 
-`php artisan storage:link`
+```bash
+npm run dev
+```
 
-### Run Server
+## After Pulling New Code
 
-1. `php artisan serve` or Laravel Homestead
-1. Visit `localhost:8000` in your browser. Email: `admin@gmail.com`, Password: `admin123`.
- <!-- 1. Online demo: [pos.khmernokor.com](https://pos.khmernokor.com/) -->
+```bash
+composer install
+npm install
+php artisan migrate
+npm run build
+php artisan optimize:clear
+```
 
-### Feature To-Do List
+## Useful Checks
 
-#### 📊 Dashboard
-- [x] Display overall sales summary (total revenue, today's sales, top-selling product)
+```bash
+php artisan test
+npm run build
+php artisan route:list
+```
 
-#### 📦 Products
-- [x] Product list with pagination, search, and category filters
-- [x] Add product form (name, price, stock, image, category)
-- [x] Edit/Delete product actions
+## Notes
 
-#### 🛒 Point Of Sale
-- [x] Responsive POS interface (for desktop & tablet)
-- [x] Add products via barcode scan or name search
-- [x] Display cart with items, quantity
-- [ ] Support multiple payment methods (cash, card, etc.)
-- [ ] Apply discount by specific items
-- [ ] Apply discount by invoice (overall discount)
-- [ ] Print or download sale receipt
-
-#### 📦 Orders
-- [x] List all sales/orders with filters (date)
-    - [ ] Add filter (status, customer)
-- [x] View detailed order/invoice page
-- [ ] Support order returns and refunds
-
-#### 👥 Customers
-- [x] Customer list
-    - [ ] Filter customer with (name, phone and email)
-- [x] Add/Edit customer information (name, phone, email, address)
-- [ ] View customer order history
-
-#### 🚚 Supplier
-- [x] Supplier list
-    - [ ] Filter supplier with (name, phone and email)
-- [x] Add/Edit supplier info (name, phone, email, ...)
-- [ ] View purchase/order history by supplier
-
-#### 📥 Purchase — by [Emre Dikmen](https://github.com/fabyo0)
-- [x] Add purchase form (select supplier, date, invoice number)
-- [x] Add purchased items with quantity and cost
-- [x] Update product stock automatically on purchase
-- [x] View list of purchases with filters (supplier, date)
-- [x] Generate printable purchase receipt (80mm)
-
-#### ⚙️ Settings
-- [x] Store settings (name, currency)
-    - [ ] Add tax config to store setting
-
-
-### Screenshots
-
-#### Product list
-
-![Product list](https://raw.githubusercontent.com/angkosal/laravel-pos/master/screenshots/products_list.png)
-
-#### Create order
-
-![Create order](https://raw.githubusercontent.com/angkosal/laravel-pos/master/screenshots/pos.png)
-
-#### Order list
-
-![Order list](https://raw.githubusercontent.com/angkosal/laravel-pos/master/screenshots/order_list.png)
-
-#### Customer list
-
-![Customer list](https://raw.githubusercontent.com/angkosal/laravel-pos/master/screenshots/customer_list.png)
-
-
-# 🌟 Or Khmernokor POS :)
-
-[Khmernokor POS](https://pos.khmernokor.com) is a modern and efficient Point of Sale system tailored for restaurants, cafés, and retail businesses. Built with a focus on usability, speed, and flexibility, it provides an all-in-one solution for front-of-house and back-of-house operations.
-
----
-
-## 🖥️ POS Screen
-![POS Screen](https://raw.githubusercontent.com/angkosal/laravel-pos/master/screenshots/khmernokor-pos/pos.png)
-
-The POS interface is clean, responsive, and optimized for quick ordering. Cashiers and servers can easily select items, apply discounts, manage tables, and process various payment methods efficiently.
-
----
-
-## 🖨️ Kitchen Printer
-![Kitchen Printer](https://raw.githubusercontent.com/angkosal/laravel-pos/master/screenshots/khmernokor-pos/kitchen-printer.jpg)
-
-Orders placed via the POS are instantly sent to the kitchen printer. This ensures accurate, printed tickets that help kitchen staff prepare dishes quickly and with minimal error.
-
----
-
-## 🍽️ Kitchen Display System (KDS)
-![Kitchen Display](https://raw.githubusercontent.com/angkosal/laravel-pos/master/screenshots/khmernokor-pos/kitchen-display.png)
-
-Replace traditional printed tickets with a digital kitchen display. Staff can view and manage incoming orders in real time, mark items as complete, and streamline food preparation.
-
----
-
-## 🧾 Receipt Preview
-![Receipt Preview](https://raw.githubusercontent.com/angkosal/laravel-pos/master/screenshots/khmernokor-pos/receipt-preview.png)
-
-Preview and print receipts with detailed breakdowns of items, quantities, discounts, taxes, and total amounts—customizable to suit your business branding.
-
----
-
-## 🖨️ Cashier Printer
-![Cashier Printer](https://raw.githubusercontent.com/angkosal/laravel-pos/master/screenshots/khmernokor-pos/cashier-printer.jpg)
-
-Print high-quality receipts at the cashier station for customers upon checkout. Reliable and fast printing supports smooth and professional transactions.
-
----
-
-## 📱 QR Menu for Customers ordering
-<!-- ![QR Menu](https://raw.githubusercontent.com/angkosal/laravel-pos/master/screenshots/khmernokor-pos/qr-menu.png) -->
-
-Let customers scan a QR code to view the digital menu on their phones. This contactless feature enhances the dining experience while reducing the need for physical menus.
-
----
-
-## Video Demo on Windows
-[![Watch the video](https://img.youtube.com/vi/4ARl-Ww71Gc/hqdefault.jpg)](https://www.youtube.com/shorts/4ARl-Ww71Gc)
-
-## Video Demo on Mobile
-[![Watch the video](https://img.youtube.com/vi/qqUSv7ab3dk/hqdefault.jpg)](https://www.youtube.com/watch?v=qqUSv7ab3dk)
-
----
-
-Khmernokor POS is your complete solution for managing restaurant operations—from order taking and kitchen coordination to payment and reporting.
-
-🔗 [Explore more at pos.khmernokor.com](https://pos.khmernokor.com)
+- Do not commit `.env`, `vendor`, `node_modules`, `public/build`, or generated IDE helper files.
+- This project uses Vite. Legacy Laravel Mix files and built `public/css` / `public/js` artifacts are intentionally not tracked.
+- Uploaded product/customer/supplier images are stored through Laravel storage. Run `php artisan storage:link` after first setup.

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Finance;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\Expense;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -45,7 +46,11 @@ class ExpenseController extends Controller
             'description' => ['nullable', 'string', 'max:255'],
         ]);
 
-        Expense::create($data + ['user_id' => $request->user()->id]);
+        $expense = Expense::create($data + ['user_id' => $request->user()->id]);
+        AuditLog::record('expense.created', $expense, [
+            'category' => $expense->category,
+            'amount' => (float) $expense->amount,
+        ]);
 
         return redirect()->route('expenses.index')
             ->with('success', __('Expense recorded successfully.'));
@@ -53,6 +58,10 @@ class ExpenseController extends Controller
 
     public function destroy(Expense $expense): RedirectResponse
     {
+        AuditLog::record('expense.deleted', $expense, [
+            'category' => $expense->category,
+            'amount' => (float) $expense->amount,
+        ]);
         $expense->delete();
 
         return redirect()->route('expenses.index')

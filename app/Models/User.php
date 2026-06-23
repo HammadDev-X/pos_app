@@ -62,6 +62,7 @@ class User extends Authenticatable
         'last_name',
         'email',
         'password',
+        'role',
     ];
 
     /**
@@ -108,5 +109,10 @@ class User extends Authenticatable
     public function getAvatar(): string
     {
         return 'https://www.gravatar.com/avatar/' . md5($this->email);
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
     }
 }

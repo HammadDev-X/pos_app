@@ -35,13 +35,15 @@ class PurchaseItem extends Model
         'product_id',
         'quantity',
         'purchase_price',
+        'expiry_date',
     ];
 
     protected function casts(): array
     {
         return [
             'quantity' => 'integer',
-            'purchase_price' => 'decimal:2'
+            'purchase_price' => 'decimal:2',
+            'expiry_date' => 'date',
         ];
     }
 

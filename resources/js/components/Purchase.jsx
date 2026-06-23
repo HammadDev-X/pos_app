@@ -15,6 +15,8 @@ class Purchase extends Component {
             supplier_id: "",
             purchase_date: new Date().toISOString().split('T')[0],
             status: "completed",
+            transport_cost: "0",
+            other_cost: "0",
             notes: "",
             translations: {},
         };
@@ -32,6 +34,8 @@ class Purchase extends Component {
         this.setSupplierId = this.setSupplierId.bind(this);
         this.handleDateChange = this.handleDateChange.bind(this);
         this.handleStatusChange = this.handleStatusChange.bind(this);
+        this.handleCostChange = this.handleCostChange.bind(this);
+        this.handleExpiryChange = this.handleExpiryChange.bind(this);
         this.handleNotesChange = this.handleNotesChange.bind(this);
         this.handleClickSubmit = this.handleClickSubmit.bind(this);
         this.loadTranslations = this.loadTranslations.bind(this);
@@ -142,6 +146,7 @@ class Purchase extends Component {
                 pivot: {
                     quantity: 1,
                     purchase_price: product.purchase_price || 0,
+                    expiry_date: "",
                     product_id: product.id,
                     user_id: 1,
                 },
@@ -204,7 +209,7 @@ class Purchase extends Component {
 
     getTotal(cart) {
         const total = cart.map((c) => c.pivot.quantity * (c.pivot.purchase_price || 0));
-        return sum(total).toFixed(2);
+        return (sum(total) + (Number(this.state.transport_cost) || 0) + (Number(this.state.other_cost) || 0)).toFixed(2);
     }
 
     handleClickDelete(product_id) {
@@ -239,12 +244,27 @@ class Purchase extends Component {
         this.setState({ status: event.target.value });
     }
 
+    handleCostChange(field, value) {
+        this.setState({ [field]: value });
+    }
+
+    handleExpiryChange(product_id, value) {
+        this.setState({
+            cart: this.state.cart.map((c) => {
+                if (c.id === product_id) {
+                    c.pivot.expiry_date = value;
+                }
+                return c;
+            }),
+        });
+    }
+
     handleNotesChange(event) {
         this.setState({ notes: event.target.value });
     }
 
     handleClickSubmit() {
-        const { supplier_id, purchase_date, status, notes, cart, suppliers } = this.state;
+        const { supplier_id, purchase_date, status, transport_cost, other_cost, notes, cart, suppliers } = this.state;
 
         // Validation
         if (!supplier_id) {
@@ -261,7 +281,8 @@ class Purchase extends Component {
         const items = cart.map(c => ({
             product_id: c.id,
             quantity: c.pivot.quantity,
-            purchase_price: c.pivot.purchase_price || 0
+            purchase_price: c.pivot.purchase_price || 0,
+            expiry_date: c.pivot.expiry_date || null
         }));
 
         // Get supplier info safely
@@ -289,6 +310,8 @@ class Purchase extends Component {
                         supplier_id,
                         purchase_date,
                         total_amount,
+                        transport_cost,
+                        other_cost,
                         status,
                         notes,
                         items
@@ -311,6 +334,8 @@ class Purchase extends Component {
                     supplier_id: "",
                     purchase_date: new Date().toISOString().split('T')[0],
                     status: "completed",
+                    transport_cost: "0",
+                    other_cost: "0",
                     notes: ""
                 });
             }
@@ -326,6 +351,8 @@ class Purchase extends Component {
             supplier_id,
             purchase_date,
             status,
+            transport_cost,
+            other_cost,
             notes,
             translations = {}
         } = this.state;
@@ -405,6 +432,30 @@ class Purchase extends Component {
                                         onChange={this.handleDateChange}
                                     />
                                 </div>
+                                <div className="form-row">
+                                    <div className="form-group col-6">
+                                        <label>Transport Cost</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            className="form-control"
+                                            value={transport_cost}
+                                            onChange={(event) => this.handleCostChange("transport_cost", event.target.value)}
+                                        />
+                                    </div>
+                                    <div className="form-group col-6">
+                                        <label>Other Cost</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            className="form-control"
+                                            value={other_cost}
+                                            onChange={(event) => this.handleCostChange("other_cost", event.target.value)}
+                                        />
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -422,6 +473,7 @@ class Purchase extends Component {
                                         <th>Product</th>
                                         <th width="70">Qty</th>
                                         <th width="90">Price</th>
+                                        <th width="120">Expiry</th>
                                         <th width="40"></th>
                                     </tr>
                                     </thead>
@@ -443,6 +495,14 @@ class Purchase extends Component {
                                                         )
                                                     }
                                                     min="1"
+                                                />
+                                            </td>
+                                            <td>
+                                                <input
+                                                    type="date"
+                                                    className="form-control form-control-sm"
+                                                    value={c.pivot.expiry_date || ""}
+                                                    onChange={(event) => this.handleExpiryChange(c.id, event.target.value)}
                                                 />
                                             </td>
                                             <td>

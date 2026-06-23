@@ -11,7 +11,9 @@ trait ProductScopes
      */
     public function isLowStock(): bool
     {
-        return $this->quantity < (int) config('settings.warning_quantity', 10);
+        $minimum = (float) ($this->minimum_stock_level ?: config('settings.warning_quantity', 10));
+
+        return $this->track_stock && (float) $this->quantity < $minimum;
     }
 
     /**
@@ -19,7 +21,7 @@ trait ProductScopes
      */
     public function isOutOfStock(): bool
     {
-        return $this->quantity === 0;
+        return $this->track_stock && (float) $this->quantity <= 0;
     }
 
     /**
@@ -35,7 +37,9 @@ trait ProductScopes
      */
     public function scopeLowStock($query)
     {
-        return $query->where('quantity', '<', (int) config('settings.warning_quantity', 10));
+        return $query
+            ->where('track_stock', true)
+            ->whereRaw('quantity < COALESCE(NULLIF(minimum_stock_level, 0), ?)', [(float) config('settings.warning_quantity', 10)]);
     }
 
     /**
@@ -45,7 +49,7 @@ trait ProductScopes
     {
         return $query->select(
             'products.*',
-            DB::raw('SUM(order_items.quantity) as total_sold')
+            DB::raw('SUM(order_items.quantity - COALESCE(order_items.returned_quantity, 0)) as total_sold')
         )
             ->join('order_items', 'order_items.product_id', '=', 'products.id')
             ->groupBy('products.id')
@@ -61,7 +65,7 @@ trait ProductScopes
     {
         return $query->select(
             'products.*',
-            DB::raw('SUM(order_items.quantity) as total_sold')
+            DB::raw('SUM(order_items.quantity - COALESCE(order_items.returned_quantity, 0)) as total_sold')
         )
             ->join('order_items', 'order_items.product_id', '=', 'products.id')
             ->join('orders', 'orders.id', '=', 'order_items.order_id')
@@ -80,7 +84,7 @@ trait ProductScopes
     {
         return $query->select(
             'products.*',
-            DB::raw('SUM(order_items.quantity) as total_sold')
+            DB::raw('SUM(order_items.quantity - COALESCE(order_items.returned_quantity, 0)) as total_sold')
         )
             ->join('order_items', 'order_items.product_id', '=', 'products.id')
             ->join('orders', 'orders.id', '=', 'order_items.order_id')
@@ -97,6 +101,8 @@ trait ProductScopes
             $query->where(function ($query) use ($term): void {
                 $query->where('name', 'LIKE', "%{$term}%")
                     ->orWhere('barcode', 'LIKE', "%{$term}%")
+                    ->orWhere('sku', 'LIKE', "%{$term}%")
+                    ->orWhere('short_code', 'LIKE', "%{$term}%")
                     ->orWhereHas('category', function ($query) use ($term): void {
                         $query->where('name', 'LIKE', "%{$term}%");
                     });

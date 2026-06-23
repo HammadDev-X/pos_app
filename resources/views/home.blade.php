@@ -22,6 +22,16 @@
             <strong>{{ $orders_count }}</strong>
             <small>{{ $unpaid_orders_count }} {{ __('dashboard.open_balances') }}</small>
         </a>
+        <a href="{{ route('reports.business') }}" class="metric-card metric-sales">
+            <span>This Month's Sales</span>
+            <strong>{{ config('settings.currency_symbol') }} {{ number_format($sales_this_month, 2) }}</strong>
+            <small>{{ config('settings.currency_symbol') }} {{ number_format($cash_sales, 2) }} cash received</small>
+        </a>
+        <a href="{{ route('customers.index') }}" class="metric-card metric-orders">
+            <span>Total Receivable</span>
+            <strong>{{ config('settings.currency_symbol') }} {{ number_format($total_receivable, 2) }}</strong>
+            <small>{{ $customers_with_balance_count }} customers with balance</small>
+        </a>
         <a href="{{ route('reports.business') }}" class="metric-card metric-customers">
             <span>Net Profit Today</span>
             <strong>{{ config('settings.currency_symbol') }} {{ number_format($net_profit_today, 2) }}</strong>
@@ -35,8 +45,44 @@
         <a href="{{ route('customers.index') }}" class="metric-card metric-customers">
             <span>{{ __('dashboard.Customers_Count') }}</span>
             <strong>{{ $customers_count }}</strong>
-            <small>{{ $active_products_count }} / {{ $products_count }} {{ __('dashboard.active_products') }}</small>
+            <small>{{ $active_customers_count }} active customers</small>
         </a>
+    </div>
+
+    <div class="row">
+        <div class="col-xl-8">
+            <div class="card table-card">
+                <div class="card-header"><h3 class="card-title">Monthly Sales Calendar</h3></div>
+                <div class="card-body">
+                    <div class="monthly-sales-grid">
+                        @foreach($monthly_calendar as $day)
+                            <div class="monthly-sales-day {{ $day['sales'] > 0 ? 'has-sales' : '' }}">
+                                <span>{{ $day['day'] }}</span>
+                                <strong>{{ number_format((float) $day['sales'], 0) }}</strong>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-4">
+            <div class="card table-card">
+                <div class="card-header"><h3 class="card-title">Expense Summary</h3></div>
+                <div class="card-body p-0">
+                    <table class="table mb-0">
+                        <tr><th>Total Expenses</th><td>{{ config('settings.currency_symbol') }} {{ number_format($total_expenses, 2) }}</td></tr>
+                        <tr><th>Credit Sales</th><td>{{ config('settings.currency_symbol') }} {{ number_format($credit_sales, 2) }}</td></tr>
+                        <tr><th>Credit Recovery</th><td>{{ config('settings.currency_symbol') }} {{ number_format((float) $recovery_payments, 2) }}</td></tr>
+                        @foreach($expense_breakdown as $expense)
+                            <tr>
+                                <th>{{ $expense->category }}</th>
+                                <td>{{ config('settings.currency_symbol') }} {{ number_format((float) $expense->total, 2) }}</td>
+                            </tr>
+                        @endforeach
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="row">

@@ -6,17 +6,25 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
 
 class CategoryController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request): View|JsonResponse
     {
-        $categories = Category::query()
+        $query = Category::query()
             ->withCount('products')
             ->when($request->search, function ($query, string $search): void {
                 $query->where('name', 'like', "%{$search}%");
             })
+            ->when($request->boolean('active'), fn ($query) => $query->where('status', true));
+
+        if ($request->wantsJson()) {
+            return response()->json($query->orderBy('name')->get());
+        }
+
+        $categories = $query
             ->latest()
             ->paginate(10)
             ->withQueryString();

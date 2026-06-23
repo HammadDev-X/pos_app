@@ -41,7 +41,15 @@ class Order extends Model
 
     protected $fillable = [
         'customer_id',
-        'user_id'
+        'user_id',
+        'discount',
+        'due_date',
+        'status',
+    ];
+
+    protected $casts = [
+        'discount' => 'decimal:2',
+        'due_date' => 'date',
     ];
 
     /**
@@ -58,6 +66,11 @@ class Order extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class, 'order_id', 'id');
+    }
+
+    public function returns(): HasMany
+    {
+        return $this->hasMany(OrderReturn::class);
     }
 
     /**
@@ -89,12 +102,42 @@ class Order extends Model
     /**
      * Calculate order total.
      */
-    public function total(): float
+    public function grossTotal(): float
     {
         if ($this->relationLoaded('items')) {
             return (float) $this->items->sum('price');
         }
         return (float) $this->items()->sum('price');
+    }
+
+    public function returnedAmount(): float
+    {
+        if ($this->relationLoaded('items')) {
+            return (float) $this->items->sum(fn (OrderItem $item): float => $item->returnedAmount());
+        }
+
+        return (float) $this->items()
+            ->get()
+            ->sum(fn (OrderItem $item): float => $item->returnedAmount());
+    }
+
+    public function discountAmount(): float
+    {
+        return min((float) ($this->discount ?? 0), max($this->grossTotal() - $this->returnedAmount(), 0));
+    }
+
+    public function total(): float
+    {
+        return max($this->grossTotal() - $this->returnedAmount() - $this->discountAmount(), 0);
+    }
+
+    public function costOfGoodsSold(): float
+    {
+        if ($this->relationLoaded('items')) {
+            return (float) $this->items->sum(fn (OrderItem $item): float => $item->netCost());
+        }
+
+        return (float) $this->items()->get()->sum(fn (OrderItem $item): float => $item->netCost());
     }
 
     /**
@@ -138,6 +181,11 @@ class Order extends Model
     public function isFullyPaid(): bool
     {
         return $this->receivedAmount() >= $this->total();
+    }
+
+    public function isCancelled(): bool
+    {
+        return $this->status === 'cancelled';
     }
 
     /**

@@ -1,3 +1,38 @@
+Proprietary Non-Transferable License (PNTL)
+
+Copyright (c) 2026 [OWNER NAME]. All rights reserved.
+
+1. Grant of License
+Subject to the terms and conditions of this License, the copyright owner ("Owner") hereby grants you a non-exclusive, non-transferable, revocable license to use the accompanying software (the "Software") solely for your internal business purposes.
+
+2. Restrictions
+You may not, under any circumstances:
+- Sell, lease, rent, sublicense, distribute, publish, or otherwise transfer the Software or any portion of the Software to any third party.
+- Provide, disclose, share, give, or make available the source code, object code, or any portion of the Software to any third party.
+- Permit any third party to access, use, or operate the Software except as strictly necessary for internal use by your personnel under this License.
+- Remove, alter, or obscure any proprietary notices, labels, or marks on the Software.
+
+You may modify the Software for internal use only, provided that any modifications remain subject to the restrictions above and are not distributed, shared, or otherwise disclosed to any third party.
+
+3. Ownership
+All right, title and interest in and to the Software, including all intellectual property rights, are and will remain the exclusive property of the Owner. No title to the intellectual property is transferred to you.
+
+4. Termination
+This License is effective until terminated. The License will terminate immediately without notice if you fail to comply with any term of this License. Upon termination you must cease all use of the Software and destroy all copies, including modified copies, in your possession or control.
+
+5. Disclaimer of Warranty
+THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND. TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE OWNER DISCLAIMS ALL WARRANTIES, WHETHER EXPRESS, IMPLIED, STATUTORY OR OTHERWISE, INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR NON-INFRINGEMENT.
+
+6. Limitation of Liability
+IN NO EVENT WILL THE OWNER BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL OR PUNITIVE DAMAGES, OR LOSS OF PROFITS, REVENUE, DATA OR USE, INCURRED BY YOU OR ANY THIRD PARTY, WHETHER IN AN ACTION IN CONTRACT OR TORT, EVEN IF THE OWNER HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+
+7. Governing Law
+This License is governed by and construed in accordance with the laws of the jurisdiction of the Owner, without regard to conflict of law principles.
+
+8. Contact
+For permissions or inquiries contact: [OWNER CONTACT]
+
+NOTE: This file is a simple restrictive license template created for convenience. It is not legal advice. Consult a qualified attorney to tailor license terms for your jurisdiction and specific needs.
 MIT License
 
 Copyright (c) 2023 [Laravel-POS contributors](https://github.com/angkosal/laravel-pos/graphs/contributors)

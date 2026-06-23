@@ -10,9 +10,10 @@ use Illuminate\Support\Carbon;
 /**
  * @property int $id
  * @property float $price
- * @property int $quantity
+ * @property float $quantity
  * @property int $order_id
- * @property int $product_id
+ * @property int|null $product_id
+ * @property string|null $custom_item_name
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read \App\Models\Order $order
@@ -34,13 +35,18 @@ class OrderItem extends Model
     protected $fillable = [
         'price',
         'quantity',
+        'unit_cost',
+        'returned_quantity',
         'product_id',
-        'order_id'
+        'order_id',
+        'custom_item_name',
     ];
 
     protected $casts = [
         'price' => 'float',
-        'quantity' => 'integer',
+        'quantity' => 'float',
+        'unit_cost' => 'float',
+        'returned_quantity' => 'float',
     ];
 
     /**
@@ -73,5 +79,25 @@ class OrderItem extends Model
     public function unitPrice(): float
     {
         return $this->quantity > 0 ? $this->price / $this->quantity : 0;
+    }
+
+    public function returnableQuantity(): float
+    {
+        return max((float) $this->quantity - (float) $this->returned_quantity, 0);
+    }
+
+    public function returnedAmount(): float
+    {
+        return $this->unitPrice() * (float) $this->returned_quantity;
+    }
+
+    public function netQuantity(): float
+    {
+        return max((float) $this->quantity - (float) $this->returned_quantity, 0);
+    }
+
+    public function netCost(): float
+    {
+        return $this->netQuantity() * (float) $this->unit_cost;
     }
 }

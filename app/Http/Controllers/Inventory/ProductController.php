@@ -23,12 +23,16 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
-        $products = Product::query()
+        $perPage = (int) $request->get('per_page', 10);
+
+        $productsQuery = Product::query()
             ->with('category')
             ->search($request->search)
             ->when($request->category_id, fn ($query, $categoryId) => $query->where('category_id', $categoryId))
-            ->latest()
-            ->paginate(10);
+            ->when($request->boolean('is_quick'), fn ($query) => $query->where('is_quick_item', true))
+            ->when($request->boolean('active'), fn ($query) => $query->active());
+
+        $products = $productsQuery->latest()->paginate($perPage);
 
         return $request->wantsJson()
             ? response()->json($products)

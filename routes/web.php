@@ -12,7 +12,9 @@ use App\Http\Controllers\Management\SupplierController;
 use App\Http\Controllers\Pos\CartController;
 use App\Http\Controllers\Pos\OrderController;
 use App\Http\Controllers\Reports\BusinessReportController;
+use App\Http\Controllers\Reports\AuditLogController;
 use App\Http\Controllers\Reports\DataExportController;
+use App\Http\Controllers\Reports\ProductAnalyticsController;
 use App\Http\Controllers\Settings\SettingController;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Redirector;
@@ -32,9 +34,14 @@ Route::prefix('admin')->middleware(['auth', 'locale'])->group(function (): void 
     Route::resource('stock-adjustments', StockAdjustmentController::class)->only(['index', 'create', 'store']);
     Route::resource('expenses', ExpenseController::class)->only(['index', 'create', 'store', 'destroy']);
     Route::get('/reports/business', [BusinessReportController::class, 'index'])->name('reports.business');
+    Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
+    Route::get('/reports/product-analytics', [ProductAnalyticsController::class, 'index'])->name('reports.product-analytics');
+    Route::get('/reports/product-analytics/data', [ProductAnalyticsController::class, 'data'])->name('reports.product-analytics.data');
     Route::get('/exports', [DataExportController::class, 'index'])->name('exports.index');
     Route::get('/exports/{type}', [DataExportController::class, 'export'])->name('exports.download');
     Route::resource('customers', CustomerController::class);
+    Route::get('/orders/{order}/return', [OrderController::class, 'returnForm'])->name('orders.return');
+    Route::post('/orders/{order}/return', [OrderController::class, 'processReturn'])->name('orders.return.store');
     Route::resource('orders', OrderController::class);
     Route::resource('suppliers', SupplierController::class);
 

@@ -40,6 +40,7 @@
                     <td>{{$customer->created_at}}</td>
                     <td>
                         <a href="{{ route('customers.edit', $customer) }}" class="btn btn-primary"><i class="fas fa-edit"></i></a>
+                        <a href="{{ route('customers.show', $customer) }}" class="btn btn-info"><i class="fas fa-book"></i></a>
                         <button class="btn btn-danger btn-delete" data-url="{{route('customers.destroy', $customer)}}"><i class="fas fa-trash"></i></button>
                     </td>
                 </tr>

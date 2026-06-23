@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Inventory;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Purchase\PurchaseStoreRequest;
 use App\Http\Requests\Purchase\PurchaseUpdateRequest;
+use App\Models\AuditLog;
 use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\Supplier;
@@ -79,6 +80,8 @@ class PurchaseController extends Controller
                 'user_id' => Auth::id(),
                 'purchase_date' => $request->purchase_date,
                 'total_amount' => $request->total_amount,
+                'transport_cost' => $request->input('transport_cost', 0),
+                'other_cost' => $request->input('other_cost', 0),
                 'status' => $request->status ?? 'pending',
                 'notes' => $request->notes,
             ]);
@@ -89,6 +92,7 @@ class PurchaseController extends Controller
                     'product_id' => $item['product_id'],
                     'quantity' => $item['quantity'],
                     'purchase_price' => $item['purchase_price'],
+                    'expiry_date' => $item['expiry_date'] ?? null,
                 ]);
 
                 // If status is completed, update stock and purchase price
@@ -101,6 +105,11 @@ class PurchaseController extends Controller
             }
 
             DB::commit();
+
+            AuditLog::record('purchase.created', $purchase, [
+                'status' => $purchase->status,
+                'total_amount' => (float) $purchase->total_amount,
+            ]);
 
             // Clear purchase cart
             $request->user()->purchaseCart()->detach();
@@ -143,6 +152,8 @@ class PurchaseController extends Controller
                 'supplier_id' => $request->supplier_id,
                 'purchase_date' => $request->purchase_date,
                 'total_amount' => $request->total_amount,
+                'transport_cost' => $request->input('transport_cost', 0),
+                'other_cost' => $request->input('other_cost', 0),
                 'status' => $newStatus,
                 'notes' => $request->notes,
             ]);
@@ -168,6 +179,12 @@ class PurchaseController extends Controller
             }
 
             DB::commit();
+
+            AuditLog::record('purchase.updated', $purchase, [
+                'old_status' => $oldStatus,
+                'new_status' => $newStatus,
+                'total_amount' => (float) $purchase->total_amount,
+            ]);
 
             return redirect()->route('purchases.index')
                 ->with('success', __('Purchase updated successfully!'));
@@ -197,6 +214,11 @@ class PurchaseController extends Controller
                     $product->save();
                 }
             }
+
+            AuditLog::record('purchase.deleted', $purchase, [
+                'status' => $purchase->status,
+                'total_amount' => (float) $purchase->total_amount,
+            ]);
 
             $purchase->delete();
 

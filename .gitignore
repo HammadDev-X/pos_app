@@ -2,6 +2,10 @@
 /public/build
 /public/hot
 /public/storage
+/public/css
+/public/js
+/public/fonts
+/public/mix-manifest.json
 /storage/*.key
 /vendor
 .env
@@ -10,10 +14,15 @@
 .phpunit.result.cache
 .phpunit.cache/
 phpunit.xml.bak
+_ide_helper.php
+composer_install.log
+.DS_Store
+**/.DS_Store
 Homestead.json
 Homestead.yaml
 auth.json
 npm-debug.log
 yarn-error.log
+yarn.lock
 /.idea
 /.vscode

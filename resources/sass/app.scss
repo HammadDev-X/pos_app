@@ -67,6 +67,38 @@ $fa-font-path: "@fortawesome/fontawesome-free/webfonts";
         margin: 8px 0;
     }
 
+    .monthly-sales-grid {
+        display: grid;
+        gap: 8px;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+    }
+
+    .monthly-sales-day {
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        min-height: 58px;
+        padding: 8px;
+    }
+
+    .monthly-sales-day span {
+        color: #6b7280;
+        display: block;
+        font-size: 0.75rem;
+    }
+
+    .monthly-sales-day strong {
+        color: #111827;
+        display: block;
+        font-size: 0.9rem;
+        line-height: 1.2;
+    }
+
+    .monthly-sales-day.has-sales {
+        background: #ecfdf5;
+        border-color: #86efac;
+    }
+
     .metric-sales {
         border-color: #1f9d55;
     }
@@ -231,6 +263,81 @@ $fa-font-path: "@fortawesome/fontawesome-free/webfonts";
 
     .pos-search input {
         padding-left: 36px;
+    }
+
+    .open-item-form {
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        padding: 10px;
+    }
+
+    .pos-section-title {
+        color: #4b5563;
+        font-size: 0.8125rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+    }
+
+    .quick-items,
+    .category-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .quick-item,
+    .category-buttons button {
+        background: #fff;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        color: #111827;
+        min-height: 48px;
+    }
+
+    .quick-item {
+        align-items: center;
+        display: grid;
+        gap: 8px;
+        grid-template-columns: 44px minmax(90px, 1fr);
+        max-width: 220px;
+        padding: 8px 10px;
+        text-align: left;
+    }
+
+    .quick-item img {
+        border-radius: 5px;
+        height: 44px;
+        object-fit: cover;
+        width: 44px;
+    }
+
+    .quick-item span,
+    .quick-item small {
+        display: block;
+        line-height: 1.2;
+    }
+
+    .quick-item span {
+        font-weight: 700;
+    }
+
+    .quick-item small {
+        color: #6b7280;
+        grid-column: 2;
+    }
+
+    .category-buttons button {
+        font-weight: 700;
+        padding: 10px 14px;
+    }
+
+    .quick-item:hover,
+    .category-buttons button:hover,
+    .category-buttons button.active {
+        border-color: #2f80ed;
+        color: #1d4ed8;
     }
 }
 

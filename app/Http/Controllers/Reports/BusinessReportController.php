@@ -22,14 +22,13 @@ class BusinessReportController extends Controller
             ->whereBetween('created_at', [$dateFrom . ' 00:00:00', $dateTo . ' 23:59:59'])
             ->get();
 
+        $grossSales = $orders->sum(fn (Order $order): float => $order->grossTotal());
+        $salesReturns = $orders->sum(fn (Order $order): float => $order->returnedAmount());
+        $discounts = $orders->sum(fn (Order $order): float => $order->discountAmount());
         $sales = $orders->sum(fn (Order $order): float => $order->total());
         $received = $orders->sum(fn (Order $order): float => $order->receivedAmount());
         $due = max(0, $sales - $received);
-        $cost = $orders->sum(function (Order $order): float {
-            return $order->items->sum(function ($item): float {
-                return ((float) ($item->product?->purchase_price ?? 0)) * (int) $item->quantity;
-            });
-        });
+        $cost = $orders->sum(fn (Order $order): float => $order->costOfGoodsSold());
         $expenses = (float) Expense::whereBetween('expense_date', [$dateFrom, $dateTo])->sum('amount');
         $grossProfit = $sales - $cost;
         $netProfit = $grossProfit - $expenses;
@@ -42,9 +41,20 @@ class BusinessReportController extends Controller
         $topProducts = OrderItem::query()
             ->selectRaw('product_id, SUM(quantity) as total_quantity, SUM(price) as total_sales')
             ->with('product')
+            ->whereNotNull('product_id')
             ->whereHas('order', fn ($query) => $query->whereBetween('created_at', [$dateFrom . ' 00:00:00', $dateTo . ' 23:59:59']))
             ->groupBy('product_id')
             ->orderByDesc('total_quantity')
+            ->limit(8)
+            ->get();
+
+        $openItems = OrderItem::query()
+            ->selectRaw('custom_item_name, SUM(quantity) as total_quantity, SUM(price) as total_sales')
+            ->whereNull('product_id')
+            ->whereNotNull('custom_item_name')
+            ->whereHas('order', fn ($query) => $query->whereBetween('created_at', [$dateFrom . ' 00:00:00', $dateTo . ' 23:59:59']))
+            ->groupBy('custom_item_name')
+            ->orderByDesc('total_sales')
             ->limit(8)
             ->get();
 
@@ -52,6 +62,9 @@ class BusinessReportController extends Controller
             'dateFrom' => $dateFrom,
             'dateTo' => $dateTo,
             'sales' => $sales,
+            'grossSales' => $grossSales,
+            'salesReturns' => $salesReturns,
+            'discounts' => $discounts,
             'received' => $received,
             'due' => $due,
             'cost' => $cost,
@@ -61,6 +74,7 @@ class BusinessReportController extends Controller
             'ordersCount' => $orders->count(),
             'paymentBreakdown' => $paymentBreakdown,
             'topProducts' => $topProducts,
+            'openItems' => $openItems,
             'lowStockProducts' => Product::lowStock()->orderBy('quantity')->limit(10)->get(),
             'purchaseTotal' => Purchase::whereBetween('purchase_date', [$dateFrom, $dateTo])->sum('total_amount'),
         ]);

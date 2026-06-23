@@ -106,15 +106,27 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="{{ route('reports.business') }}" class="nav-link {{ request()->routeIs('reports.*') ? 'active' : '' }}">
+                    <a href="{{ route('reports.business') }}" class="nav-link {{ request()->routeIs('reports.business') ? 'active' : '' }}">
                         <i class="nav-icon fas fa-chart-line"></i>
                         <p>{{ __('Business Reports') }}</p>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('reports.product-analytics') }}" class="nav-link {{ request()->routeIs('reports.product-analytics*') ? 'active' : '' }}">
+                        <i class="nav-icon fas fa-chart-bar"></i>
+                        <p>{{ __('Product Analytics') }}</p>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="{{ route('exports.index') }}" class="nav-link {{ activeSegment('exports') }}">
                         <i class="nav-icon fas fa-file-export"></i>
                         <p>{{ __('Data Export') }}</p>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('audit-logs.index') }}" class="nav-link {{ activeSegment('audit-logs') }}">
+                        <i class="nav-icon fas fa-clipboard-list"></i>
+                        <p>{{ __('Audit Logs') }}</p>
                     </a>
                 </li>
                 <!-- Settings -->

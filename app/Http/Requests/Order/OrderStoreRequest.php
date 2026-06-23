@@ -25,7 +25,13 @@ class OrderStoreRequest extends FormRequest
         return [
             'customer_id' => ['nullable', 'integer', 'exists:customers,id'],
             'amount' => ['required', 'numeric', 'min:0', 'decimal:0,2'],
+            'discount' => ['nullable', 'numeric', 'min:0', 'decimal:0,2'],
+            'due_date' => ['nullable', 'date'],
             'payment_method' => ['required', 'string', 'in:cash,card,bank_transfer,mobile_money'],
+            'custom_items' => ['nullable', 'array'],
+            'custom_items.*.name' => ['required_with:custom_items', 'string', 'max:255'],
+            'custom_items.*.price' => ['required_with:custom_items', 'numeric', 'min:0.01', 'decimal:0,2'],
+            'custom_items.*.quantity' => ['required_with:custom_items', 'numeric', 'min:0.01'],
         ];
     }
 

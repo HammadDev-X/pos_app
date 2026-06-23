@@ -22,7 +22,7 @@
 
 <div class="row">
     @foreach([
-        ['Sales', $sales, 'bg-info', 'fa-shopping-cart'],
+        ['Net Sales', $sales, 'bg-info', 'fa-shopping-cart'],
         ['Received', $received, 'bg-success', 'fa-money-bill'],
         ['Customer Due', $due, 'bg-warning', 'fa-clock'],
         ['Net Profit', $netProfit, $netProfit >= 0 ? 'bg-primary' : 'bg-danger', 'fa-chart-line'],
@@ -46,8 +46,11 @@
             <div class="card-body p-0">
                 <table class="table">
                     <tr><th>Orders</th><td>{{ $ordersCount }}</td></tr>
-                    <tr><th>Sales Revenue</th><td>{{ config('settings.currency_symbol') }}{{ number_format((float) $sales, 2) }}</td></tr>
-                    <tr><th>Estimated Product Cost</th><td>{{ config('settings.currency_symbol') }}{{ number_format((float) $cost, 2) }}</td></tr>
+                    <tr><th>Gross Sales</th><td>{{ config('settings.currency_symbol') }}{{ number_format((float) $grossSales, 2) }}</td></tr>
+                    <tr><th>Sales Returns</th><td>{{ config('settings.currency_symbol') }}{{ number_format((float) $salesReturns, 2) }}</td></tr>
+                    <tr><th>Discounts</th><td>{{ config('settings.currency_symbol') }}{{ number_format((float) $discounts, 2) }}</td></tr>
+                    <tr><th>Net Sales</th><td>{{ config('settings.currency_symbol') }}{{ number_format((float) $sales, 2) }}</td></tr>
+                    <tr><th>Cost of Products Sold</th><td>{{ config('settings.currency_symbol') }}{{ number_format((float) $cost, 2) }}</td></tr>
                     <tr><th>Gross Profit</th><td>{{ config('settings.currency_symbol') }}{{ number_format((float) $grossProfit, 2) }}</td></tr>
                     <tr><th>Expenses</th><td>{{ config('settings.currency_symbol') }}{{ number_format((float) $expenses, 2) }}</td></tr>
                     <tr><th>Purchases</th><td>{{ config('settings.currency_symbol') }}{{ number_format((float) $purchaseTotal, 2) }}</td></tr>
@@ -109,6 +112,26 @@
                     @empty
                         <tr><td class="text-muted">No low stock products</td></tr>
                     @endforelse
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><h3 class="card-title">Open Item Sales</h3></div>
+            <div class="card-body p-0">
+                <table class="table">
+                    <thead><tr><th>Item</th><th>Qty</th><th>Sales</th></tr></thead>
+                    <tbody>
+                        @forelse($openItems as $row)
+                            <tr>
+                                <td>{{ $row->custom_item_name }}</td>
+                                <td>{{ $row->total_quantity }}</td>
+                                <td>{{ config('settings.currency_symbol') }}{{ number_format((float) $row->total_sales, 2) }}</td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="3" class="text-muted">No open item sales in this range</td></tr>
+                        @endforelse
+                    </tbody>
                 </table>
             </div>
         </div>

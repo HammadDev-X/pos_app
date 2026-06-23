@@ -34,7 +34,8 @@
                     <th>{{ __('order.Customer_Name') }}</th>
                     <th>{{ __('order.Total') }}</th>
                     <th>{{ __('order.Received_Amount') }}</th>
-                    <th>{{ __('order.Status') }}</th>
+                        <th>{{ __('order.Status') }}</th>
+                    <th>Return</th>
                     <th>{{ __('order.To_Pay') }}</th>
                     <th>{{ __('order.Created_At') }}</th>
                     <th>{{ __('order.Actions') }}</th>
@@ -53,7 +54,9 @@
                         <td>{{ config('settings.currency_symbol') }} {{number_format($orderTotal, 2)}}</td>
                         <td>{{ config('settings.currency_symbol') }} {{number_format($orderReceived, 2)}}</td>
                         <td>
-                            @if($orderReceived == 0)
+                            @if($order->isCancelled())
+                                <span class="badge badge-dark">Cancelled</span>
+                            @elseif($orderReceived == 0)
                                 <span class="badge badge-danger">{{ __('order.Not_Paid') }}</span>
                             @elseif($orderReceived < $orderTotal)
                                 <span class="badge badge-warning">{{ __('order.Partial') }}</span>
@@ -61,6 +64,7 @@
                                 <span class="badge badge-success">{{ __('order.Paid') }}</span>
                             @endif
                         </td>
+                        <td>{{ config('settings.currency_symbol') }} {{ number_format($order->returnedAmount(), 2) }}</td>
                         <td>{{config('settings.currency_symbol')}} {{number_format($orderRemaining, 2)}}</td>
                         <td>{{$order->created_at}}</td>
                         <td>
@@ -79,8 +83,11 @@
                             <a class="btn btn-sm btn-outline-primary" href="{{ route('orders.show', $order) }}" target="_blank">
                                 <i class="fas fa-print"></i>
                             </a>
+                            <a class="btn btn-sm btn-outline-danger" href="{{ route('orders.return', $order) }}">
+                                <i class="fas fa-undo"></i>
+                            </a>
 
-                            @if($orderRemaining > 0)
+                            @if($orderRemaining > 0 && !$order->isCancelled())
                                 <button class="btn btn-sm btn-primary btnPartialPayment"
                                         data-toggle="modal"
                                         data-target="#partialPaymentModal"
@@ -95,6 +102,7 @@
                 </tbody>
                 <tfoot>
                 <tr>
+                    <th></th>
                     <th></th>
                     <th></th>
                     <th>{{ config('settings.currency_symbol') }} {{ number_format($total, 2) }}</th>

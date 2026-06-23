@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Product;
 
 use Illuminate\Foundation\Http\FormRequest;
+use App\Models\Product;
 
 class ProductStoreRequest extends FormRequest
 {
@@ -18,11 +19,61 @@ class ProductStoreRequest extends FormRequest
             'category_id' => ['nullable', 'exists:categories,id'],
             'description' => ['nullable', 'string'],
             'image' => ['nullable', 'image', 'max:2048'], // 2MB max
-            'barcode' => ['required', 'string', 'max:50', 'unique:products,barcode'],
+            'sku' => ['nullable', 'string', 'max:50', 'unique:products,sku'],
+            'barcode' => ['nullable', 'string', 'max:50', 'unique:products,barcode'],
+            'short_code' => ['nullable', 'string', 'max:50', 'unique:products,short_code'],
             'price' => ['required', 'numeric', 'min:0', 'decimal:0,2'],
-            'quantity' => ['required', 'integer', 'min:0'],
+            'wholesale_price' => ['nullable', 'numeric', 'min:0', 'decimal:0,2'],
+            'purchase_price' => ['nullable', 'numeric', 'min:0', 'decimal:0,2'],
+            'quantity' => ['nullable', 'numeric', 'min:0'],
+            'minimum_stock_level' => ['nullable', 'numeric', 'min:0'],
+            'unit' => ['nullable', 'string', 'max:20'],
+            'track_stock' => ['nullable', 'boolean'],
+            'is_quick_item' => ['nullable', 'boolean'],
             'status' => ['required', 'boolean'],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'sku' => $this->cleanString($this->input('sku')),
+            'barcode' => $this->cleanString($this->input('barcode')),
+            'short_code' => $this->cleanString($this->input('short_code')),
+            'unit' => $this->cleanString($this->input('unit')),
+        ]);
+
+        // Auto-generate SKU if not provided
+        if (!$this->input('sku')) {
+            $this->merge(['sku' => Product::generateSku()]);
+        }
+
+        if (!$this->filled('barcode')) {
+            $this->merge(['barcode' => null]);
+        }
+        if (!$this->filled('short_code')) {
+            $this->merge(['short_code' => null]);
+        }
+        if (!$this->has('unit')) {
+            $this->merge(['unit' => 'pcs']);
+        }
+        if (!$this->has('track_stock')) {
+            $this->merge(['track_stock' => true]);
+        }
+        if (!$this->has('is_quick_item')) {
+            $this->merge(['is_quick_item' => false]);
+        }
+    }
+
+    private function cleanString($value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $value = trim((string) $value);
+
+        return $value === '' ? null : $value;
     }
 
     public function messages(): array

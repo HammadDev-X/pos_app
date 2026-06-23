@@ -8,6 +8,9 @@
 </head>
 <body class="receipt-page">
     @php
+        $gross = $order->grossTotal();
+        $returned = $order->returnedAmount();
+        $discount = $order->discountAmount();
         $total = $order->total();
         $received = $order->receivedAmount();
         $balance = max($total - $received, 0);
@@ -15,7 +18,8 @@
 
     <main class="receipt">
         <header class="receipt-header">
-            <h1>{{ config('settings.app_name', config('app.name')) }}</h1>
+            <img src="{{ asset('images/logo.png') }}" alt="Musa Jan Frozen Foods" style="max-width: 72px; margin-bottom: 8px;">
+            <h1>{{ config('settings.app_name', 'Musa Jan Frozen Foods') }}</h1>
             @if(config('settings.shop_address'))
                 <p>{{ config('settings.shop_address') }}</p>
             @endif
@@ -38,7 +42,7 @@
             </div>
             <div>
                 <span>Customer</span>
-                <strong>{{ $order->getCustomerName() }}</strong>
+                <strong>{{ $order->getCustomerName() }}{{ $order->customer?->phone ? ' - ' . $order->customer->phone : '' }}</strong>
             </div>
             <div>
                 <span>Date</span>
@@ -58,7 +62,7 @@
             <tbody>
                 @foreach($order->items as $item)
                     <tr>
-                        <td>{{ optional($item->product)->name ?? 'Product removed' }}</td>
+                        <td>{{ $item->product?->name ?? $item->custom_item_name ?? 'Product removed' }}</td>
                         <td>{{ $item->quantity }}</td>
                         <td>{{ config('settings.currency_symbol') }} {{ number_format($item->unitPrice(), 2) }}</td>
                         <td>{{ config('settings.currency_symbol') }} {{ number_format($item->subtotal(), 2) }}</td>
@@ -68,7 +72,14 @@
         </table>
 
         <section class="receipt-totals">
-            <div><span>Total</span><strong>{{ config('settings.currency_symbol') }} {{ number_format($total, 2) }}</strong></div>
+            <div><span>Subtotal</span><strong>{{ config('settings.currency_symbol') }} {{ number_format($gross, 2) }}</strong></div>
+            @if($returned > 0)
+                <div><span>Returned</span><strong>-{{ config('settings.currency_symbol') }} {{ number_format($returned, 2) }}</strong></div>
+            @endif
+            @if($discount > 0)
+                <div><span>Discount</span><strong>-{{ config('settings.currency_symbol') }} {{ number_format($discount, 2) }}</strong></div>
+            @endif
+            <div><span>Grand Total</span><strong>{{ config('settings.currency_symbol') }} {{ number_format($total, 2) }}</strong></div>
             <div><span>Paid</span><strong>{{ config('settings.currency_symbol') }} {{ number_format($received, 2) }}</strong></div>
             <div><span>Balance</span><strong>{{ config('settings.currency_symbol') }} {{ number_format($balance, 2) }}</strong></div>
         </section>

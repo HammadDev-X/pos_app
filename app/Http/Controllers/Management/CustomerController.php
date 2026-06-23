@@ -65,6 +65,24 @@ class CustomerController extends Controller
         return view('customers.edit', ['customer' => $customer]);
     }
 
+    public function show(Customer $customer): View
+    {
+        $customer->load(['orders' => fn ($query) => $query->with(['items.product', 'payments'])->latest()]);
+
+        $orders = $customer->orders;
+        $totalSales = $orders->sum(fn ($order): float => $order->total());
+        $totalPaid = $orders->sum(fn ($order): float => $order->receivedAmount());
+        $balance = $orders->sum(fn ($order): float => max($order->remainingBalance(), 0));
+
+        return view('customers.show', [
+            'customer' => $customer,
+            'orders' => $orders,
+            'totalSales' => $totalSales,
+            'totalPaid' => $totalPaid,
+            'balance' => $balance,
+        ]);
+    }
+
     /**
      * Update the specified resource in storage.
      *

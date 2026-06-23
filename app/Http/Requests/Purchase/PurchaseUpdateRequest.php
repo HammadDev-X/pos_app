@@ -25,6 +25,8 @@ class PurchaseUpdateRequest extends FormRequest
             'supplier_id' => 'required|exists:suppliers,id',
             'purchase_date' => 'required|date',
             'total_amount' => 'required|numeric|min:0',
+            'transport_cost' => 'nullable|numeric|min:0',
+            'other_cost' => 'nullable|numeric|min:0',
             'status' => 'required|in:pending,completed,cancelled',
             'notes' => 'nullable|string|max:1000',
         ];

@@ -31,12 +31,31 @@ class CartController extends Controller
      */
     public function store(AddToCartRequest $request): JsonResponse
     {
-        $product = Product::where('barcode', $request->barcode)->first();
+        // Find product by id or by barcode/sku/short_code/name
+        $product = null;
+        if ($request->filled('product_id')) {
+            $product = Product::find($request->product_id);
+        } elseif ($request->filled('barcode')) {
+            $term = $request->barcode;
+            $product = Product::query()
+                ->where(function ($query) use ($term): void {
+                    $query->where('barcode', $term)
+                        ->orWhere('sku', $term)
+                        ->orWhere('short_code', $term)
+                        ->orWhere('id', $term)
+                        ->orWhere('name', 'LIKE', "%{$term}%");
+                })
+                ->first();
+        }
+
+        if (!$product) {
+            return response()->json(['message' => __('cart.validation.product_not_found')], 404);
+        }
 
         // Check if product already in cart
         $cartItem = $request->user()
             ->cart()
-            ->where('barcode', $request->barcode)
+            ->where('id', $product->id)
             ->first();
 
         if ($cartItem) {
@@ -63,7 +82,7 @@ class CartController extends Controller
         }
 
         // Validate stock availability
-        if ($product->quantity < $request->quantity) {
+        if ($product->track_stock && $product->quantity < $request->quantity) {
             return response()->json([
                 'message' => __('cart.available', ['quantity' => $product->quantity]),
             ], 400);
@@ -100,14 +119,16 @@ class CartController extends Controller
      */
     private function incrementCartItem($cartItem, Product $product): JsonResponse
     {
-        // Check if we can add more
-        if ($product->quantity <= $cartItem->pivot->quantity) {
+        // Check if we can add more (consider track_stock)
+        if ($product->track_stock && $product->quantity <= $cartItem->pivot->quantity) {
             return response()->json([
                 'message' => __('cart.available', ['quantity' => $product->quantity]),
             ], 400);
         }
 
-        $cartItem->pivot->increment('quantity');
+        // Use numeric increment to support decimals
+        $cartItem->pivot->quantity = $cartItem->pivot->quantity + 1;
+        $cartItem->pivot->save();
 
         return response()->json(['success' => true]);
     }
@@ -117,8 +138,8 @@ class CartController extends Controller
      */
     private function addNewCartItem(Request $request, Product $product): JsonResponse
     {
-        // Check if product is in stock
-        if ($product->quantity < 1) {
+        // Check stock only if tracking is enabled
+        if ($product->track_stock && $product->quantity < 1) {
             return response()->json([
                 'message' => __('cart.outstock'),
             ], 400);

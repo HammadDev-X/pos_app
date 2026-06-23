@@ -17,10 +17,12 @@ use Illuminate\Support\Facades\Storage;
  * @property string $name
  * @property string|null $description
  * @property string|null $image
- * @property string $barcode
+ * @property string|null $barcode
+ * @property string $sku
+ * @property string|null $short_code
  * @property numeric $price
  * @property string|null $purchase_price
- * @property int $quantity
+ * @property int|float $quantity
  * @property bool $status
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -59,16 +61,26 @@ class Product extends Model
         'description',
         'image',
         'barcode',
+        'sku',
+        'short_code',
         'price',
+        'wholesale_price',
         'purchase_price',
         'quantity',
+        'minimum_stock_level',
+        'unit',
+        'track_stock',
+        'is_quick_item',
         'status'
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
-        'quantity' => 'integer',
+        'wholesale_price' => 'decimal:2',
+        'minimum_stock_level' => 'decimal:2',
         'status' => 'boolean',
+        'track_stock' => 'boolean',
+        'is_quick_item' => 'boolean',
     ];
 
     protected $appends = ['image_url'];
@@ -78,9 +90,64 @@ class Product extends Model
         return $this->belongsTo(Category::class);
     }
 
+    protected static function booted(): void
+    {
+        static::saving(function (Product $product): void {
+            $product->barcode = static::cleanOptionalCode($product->barcode);
+            $product->short_code = static::cleanOptionalCode($product->short_code);
+            $product->sku = blank($product->sku) ? null : trim((string) $product->sku);
+            $product->unit = blank($product->unit) ? 'pcs' : trim((string) $product->unit);
+
+            if (blank($product->sku)) {
+                $product->sku = static::generateSku();
+            }
+        });
+    }
+
     public function stockAdjustments(): HasMany
     {
         return $this->hasMany(StockAdjustment::class);
+    }
+
+    public static function generateSku(string $prefix = 'SKU-'): string
+    {
+        $next = ((int) static::max('id')) + 1;
+
+        do {
+            $sku = $prefix . str_pad((string) $next, 6, '0', STR_PAD_LEFT);
+            $next++;
+        } while (static::where('sku', $sku)->exists());
+
+        return $sku;
+    }
+
+    public static function skuForId(int $id, string $prefix = 'SKU-'): string
+    {
+        return $prefix . str_pad((string) $id, 6, '0', STR_PAD_LEFT);
+    }
+
+    public function ensureSkuFromId(): void
+    {
+        if (filled($this->sku)) {
+            return;
+        }
+
+        $next = $this->id;
+        do {
+            $sku = static::skuForId($next);
+            $next++;
+        } while (static::where('sku', $sku)->where('id', '!=', $this->id)->exists());
+
+        $this->forceFill(['sku' => $sku])->saveQuietly();
+    }
+
+    private static function cleanOptionalCode($value): ?string
+    {
+        if (blank($value)) {
+            return null;
+        }
+
+        return trim((string) $value);
     }
 
     /**
@@ -93,5 +160,15 @@ class Product extends Model
         }
 
         return asset('images/img-placeholder.jpg');
+    }
+
+    /**
+     * Get the quantity as a friendly numeric value.
+     */
+    public function getQuantityAttribute($value): int|float
+    {
+        $quantity = (float) $value;
+
+        return fmod($quantity, 1.0) === 0.0 ? (int) $quantity : $quantity;
     }
 }
