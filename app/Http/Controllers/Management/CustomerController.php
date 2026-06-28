@@ -72,11 +72,13 @@ class CustomerController extends Controller
         $orders = $customer->orders;
         $totalSales = $orders->sum(fn ($order): float => $order->total());
         $totalPaid = $orders->sum(fn ($order): float => $order->receivedAmount());
-        $balance = $orders->sum(fn ($order): float => max($order->remainingBalance(), 0));
+        $openingBalance = (float) $customer->pending_amount;
+        $balance = $openingBalance + $orders->sum(fn ($order): float => max($order->remainingBalance(), 0));
 
         return view('customers.show', [
             'customer' => $customer,
             'orders' => $orders,
+            'openingBalance' => $openingBalance,
             'totalSales' => $totalSales,
             'totalPaid' => $totalPaid,
             'balance' => $balance,

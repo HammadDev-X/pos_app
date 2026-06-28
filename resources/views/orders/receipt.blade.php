@@ -12,7 +12,6 @@
         $customerMobile = $order->customer?->phone ?: 'N/A';
         $gross = $order->grossTotal();
         $returned = $order->returnedAmount();
-        $discount = $order->discountAmount();
         $total = $order->total();
         $received = $order->receivedAmount();
         $balance = max($total - $received, 0);
@@ -63,6 +62,7 @@
                     <th>Product</th>
                     <th>Quantity</th>
                     <th>Rate</th>
+                    <th>Discount</th>
                     <th>Total</th>
                 </tr>
             </thead>
@@ -72,6 +72,7 @@
                         <td>{{ $item->product?->name ?? $item->custom_item_name ?? 'Product removed' }}</td>
                         <td>{{ $item->quantity }}</td>
                         <td>{{ config('settings.currency_symbol') }} {{ number_format($item->unitPrice(), 2) }}</td>
+                        <td>{{ config('settings.currency_symbol') }} {{ number_format($item->discountAmount(), 2) }}</td>
                         <td>{{ config('settings.currency_symbol') }} {{ number_format($item->subtotal(), 2) }}</td>
                     </tr>
                 @endforeach
@@ -83,7 +84,6 @@
             @if($returned > 0)
                 <div><span>Returned</span><strong>-{{ config('settings.currency_symbol') }} {{ number_format($returned, 2) }}</strong></div>
             @endif
-            <div><span>Discount</span><strong>-{{ config('settings.currency_symbol') }} {{ number_format($discount, 2) }}</strong></div>
             <div><span>Grand Total</span><strong>{{ config('settings.currency_symbol') }} {{ number_format($total, 2) }}</strong></div>
             <div><span>Paid Amount</span><strong>{{ config('settings.currency_symbol') }} {{ number_format($received, 2) }}</strong></div>
             <div><span>Remaining Balance</span><strong>{{ config('settings.currency_symbol') }} {{ number_format($balance, 2) }}</strong></div>

@@ -27,9 +27,12 @@ class StockAdjustmentController extends Controller
 
     public function index(Request $request): View
     {
+        $types = $this->typesFor($request);
+
         $adjustments = StockAdjustment::with(['product', 'user'])
             ->when($request->product_id, fn ($query, $productId) => $query->where('product_id', $productId))
-            ->when($request->type, fn ($query, $type) => $query->where('type', $type))
+            ->when($request->type && array_key_exists($request->type, $types), fn ($query) => $query->where('type', $request->type))
+            ->when($request->user()?->isSalesman(), fn ($query) => $query->whereIn('type', array_keys($types)))
             ->latest()
             ->paginate(15)
             ->withQueryString();
@@ -37,15 +40,15 @@ class StockAdjustmentController extends Controller
         return view('stock-adjustments.index', [
             'adjustments' => $adjustments,
             'products' => Product::orderBy('name')->get(),
-            'types' => self::TYPES,
+            'types' => $types,
         ]);
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
         return view('stock-adjustments.create', [
             'products' => Product::orderBy('name')->get(),
-            'types' => self::TYPES,
+            'types' => $this->typesFor($request),
         ]);
     }
 
@@ -53,7 +56,7 @@ class StockAdjustmentController extends Controller
     {
         $data = $request->validate([
             'product_id' => ['required', 'exists:products,id'],
-            'type' => ['required', 'in:' . implode(',', array_keys(self::TYPES))],
+            'type' => ['required', 'in:' . implode(',', array_keys($this->typesFor($request)))],
             'quantity' => ['required', 'numeric', 'min:0'],
             'reason' => ['required', 'string', 'max:255'],
         ]);
@@ -91,5 +94,17 @@ class StockAdjustmentController extends Controller
 
         return redirect()->route('stock-adjustments.index')
             ->with('success', __('Stock adjusted successfully.'));
+    }
+
+    private function typesFor(Request $request): array
+    {
+        if ($request->user()?->isSalesman()) {
+            return [
+                'stock_out' => self::TYPES['stock_out'],
+                'customer_return' => self::TYPES['customer_return'],
+            ];
+        }
+
+        return self::TYPES;
     }
 }

@@ -98,9 +98,8 @@ trait ProductScopes
     public function scopeSearch($query, $term)
     {
         return $query->when($term, function ($query, $term): void {
-            $query->where(function ($query) use ($term): void {
-                $query->where('name', 'LIKE', "%{$term}%")
-                    ->orWhere('barcode', 'LIKE', "%{$term}%")
+                $query->where(function ($query) use ($term): void {
+                    $query->where('name', 'LIKE', "%{$term}%")
                     ->orWhere('sku', 'LIKE', "%{$term}%")
                     ->orWhere('short_code', 'LIKE', "%{$term}%")
                     ->orWhereHas('category', function ($query) use ($term): void {

@@ -45,7 +45,6 @@
     "product.ID": "ID",
     "product.Name": "Nombre",
     "product.Image": "Imagen",
-    "product.Barcode": "Código de barras",
     "product.Price": "Precio",
     "product.Quantity": "Cantidad",
     "product.Status": "Estado",

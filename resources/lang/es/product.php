@@ -35,7 +35,6 @@ return [
     'Description'       => 'Descripción',
     'Image'             => 'Imagen',
     'Choose_file'       => 'Elegir archivo',
-    'Barcode'           => 'Código de barras',
     'Price'             => 'Precio',
     'Quantity'          => 'Cantidad',
     'Status'            => 'Estado',

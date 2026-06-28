@@ -67,4 +67,14 @@ class UserFactory extends Factory
     {
         return $this->role(User::ROLE_CASHIER);
     }
+
+    public function manager(): static
+    {
+        return $this->role(User::ROLE_MANAGER);
+    }
+
+    public function salesman(): static
+    {
+        return $this->role(User::ROLE_SALESMAN);
+    }
 }

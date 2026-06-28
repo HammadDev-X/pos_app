@@ -199,7 +199,7 @@
                                             </div>
                                         </div>
                                     </td>
-                                    <td>{{ $product->sku ?: ($product->barcode ?: '-') }}</td>
+                                    <td>{{ $product->sku ?: '-' }}</td>
                                     <td class="text-right">{{ $qty($product->total_sold) }}</td>
                                     <td class="text-right">{{ $money($product->revenue) }}</td>
                                     <td class="text-right {{ $product->profit < 0 ? 'text-danger' : 'text-success' }}">{{ $money($product->profit) }}</td>

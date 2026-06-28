@@ -16,7 +16,6 @@ beforeEach(function () {
     $this->validProductData = [
         'name' => 'Test Product',
         'description' => 'Test Description',
-        'barcode' => '1234567890123',
         'price' => '99.99',
         'quantity' => 10,
         'status' => true,
@@ -88,7 +87,6 @@ describe('Product Store', function () {
         $this->assertDatabaseHas('products', [
             'name' => 'Test Product',
             'description' => 'Test Description',
-            'barcode' => '1234567890123',
             'price' => '99.99',
             'quantity' => 10,
             'status' => true,
@@ -102,7 +100,7 @@ describe('Product Store', function () {
         $response = $this->post(route('products.store'), $data);
         $response->assertRedirect(route('products.index'));
 
-        $product = Product::where('barcode', $this->validProductData['barcode'])->first();
+        $product = Product::where('name', $this->validProductData['name'])->first();
         expect($product->image)
             ->not
             ->toBeNull();
@@ -113,7 +111,6 @@ describe('Product Store', function () {
     test('product can be created without optional fields', function () {
         $data = [
             'name' => 'Minimal Product',
-            'barcode' => '9876543210987',
             'price' => '10.50',
             'quantity' => 5,
             'status' => true,
@@ -135,7 +132,6 @@ describe('Product Store', function () {
             'name' => 'Frozen Chicken Carton',
             'description' => 'Premium frozen chicken',
             'sku' => 'CHK-001',
-            'barcode' => '998877665544',
             'unit' => 'carton',
             'purchase_price' => '1200.50',
             'price' => '1500.00',
@@ -153,7 +149,6 @@ describe('Product Store', function () {
         $this->assertDatabaseHas('products', [
             'name' => 'Frozen Chicken Carton',
             'sku' => 'CHK-001',
-            'barcode' => '998877665544',
             'unit' => 'carton',
             'purchase_price' => '1200.50',
             'price' => '1500.00',
@@ -191,7 +186,6 @@ describe('Product Store', function () {
             $updateData = [
                 'name' => 'Updated Product',
                 'description' => 'Updated Description',
-                'barcode' => $product->barcode,
                 'price' => '199.99',
                 'quantity' => 20,
                 'status' => false,
@@ -225,7 +219,6 @@ describe('Product Store', function () {
             $newImage = UploadedFile::fake()->image('new.jpg');
 
             $updateData = array_merge($this->validProductData, [
-                'barcode' => $product->barcode,
                 'image' => $newImage,
             ]);
 
@@ -248,7 +241,6 @@ describe('Product Store', function () {
             $newImage = UploadedFile::fake()->image('new.jpg');
 
             $updateData = array_merge($this->validProductData, [
-                'barcode' => $product->barcode,
                 'image' => $newImage,
             ]);
 

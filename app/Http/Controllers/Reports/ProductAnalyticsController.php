@@ -102,7 +102,6 @@ class ProductAnalyticsController extends Controller
                 'products.purchase_price',
                 'products.image',
                 'products.quantity',
-                'products.barcode',
                 'products.sku',
                 'products.short_code',
                 'products.unit',
@@ -116,7 +115,6 @@ class ProductAnalyticsController extends Controller
                 'products.name',
                 'products.sku',
                 'products.short_code',
-                'products.barcode',
                 'products.unit',
                 'products.price',
                 'products.purchase_price',
@@ -126,8 +124,9 @@ class ProductAnalyticsController extends Controller
                 'products.is_quick_item',
                 'products.status',
                 'categories.name as category_name',
-                DB::raw("COALESCE(SUM(CASE WHEN orders.created_at BETWEEN '{$dateStart}' AND '{$dateEnd}' THEN order_items.quantity ELSE 0 END), 0) as total_sold"),
-                DB::raw("COALESCE(SUM(CASE WHEN orders.created_at BETWEEN '{$dateStart}' AND '{$dateEnd}' THEN order_items.price ELSE 0 END), 0) as revenue"),
+                DB::raw("COALESCE(SUM(CASE WHEN orders.created_at BETWEEN '{$dateStart}' AND '{$dateEnd}' THEN order_items.quantity - COALESCE(order_items.returned_quantity, 0) ELSE 0 END), 0) as total_sold"),
+                DB::raw("COALESCE(SUM(CASE WHEN orders.created_at BETWEEN '{$dateStart}' AND '{$dateEnd}' THEN (order_items.price - COALESCE(order_items.discount, 0)) * CASE WHEN order_items.quantity > 0 THEN (order_items.quantity - COALESCE(order_items.returned_quantity, 0)) / order_items.quantity ELSE 0 END ELSE 0 END), 0) as revenue"),
+                DB::raw("COALESCE(SUM(CASE WHEN orders.created_at BETWEEN '{$dateStart}' AND '{$dateEnd}' THEN COALESCE(order_items.unit_cost, 0) * (order_items.quantity - COALESCE(order_items.returned_quantity, 0)) ELSE 0 END), 0) as cost"),
                 DB::raw("COUNT(DISTINCT CASE WHEN orders.created_at BETWEEN '{$dateStart}' AND '{$dateEnd}' THEN orders.id END) as orders_count"),
                 DB::raw("MAX(CASE WHEN orders.created_at BETWEEN '{$dateStart}' AND '{$dateEnd}' THEN orders.created_at END) as last_sold_at")
             )
@@ -139,7 +138,7 @@ class ProductAnalyticsController extends Controller
                 $product->total_sold = (float) $product->total_sold;
                 $product->revenue = (float) $product->revenue;
                 $product->orders_count = (int) $product->orders_count;
-                $product->cost = $product->purchase_price * $product->total_sold;
+                $product->cost = (float) $product->cost;
                 $product->profit = $product->revenue - $product->cost;
                 $product->profit_margin = $product->revenue > 0 ? ($product->profit / $product->revenue) * 100 : 0;
                 $product->average_unit_price = $product->total_sold > 0 ? $product->revenue / $product->total_sold : 0;

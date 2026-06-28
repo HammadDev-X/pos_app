@@ -103,6 +103,34 @@ describe('Order Store', function () {
             ->and((float) $order->payments()->first()->amount)->toBe(150.0);
     });
 
+    test('order stores discounts on each item and totals use line discounts', function () {
+        $product = Product::factory()->create([
+            'price' => 100,
+            'purchase_price' => 60,
+            'quantity' => 10,
+        ]);
+        $this->user->cart()->attach($product->id, ['quantity' => 2]);
+
+        $this->postJson(route('orders.store'), [
+            'customer_id' => null,
+            'amount' => 175,
+            'item_discounts' => [
+                $product->id => 25,
+            ],
+        ])->assertCreated();
+
+        $order = Order::latest()->with('items')->first();
+        $item = $order->items->first();
+
+        expect($item->grossSubtotal())->toBe(200.0)
+            ->and($item->discountAmount())->toBe(25.0)
+            ->and($item->subtotal())->toBe(175.0)
+            ->and($order->grossTotal())->toBe(200.0)
+            ->and($order->discountAmount())->toBe(25.0)
+            ->and($order->total())->toBe(175.0)
+            ->and($order->costOfGoodsSold())->toBe(120.0);
+    });
+
     test('order reduces product stock and empties cart', function () {
         $product = Product::factory()->create(['price' => 50, 'quantity' => 10]);
         $this->user->cart()->attach($product->id, ['quantity' => 3]);

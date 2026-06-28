@@ -135,14 +135,6 @@
             font-size: 10px;
         }
 
-        .barcode {
-            text-align: center;
-            margin: 10px 0;
-            font-size: 24px;
-            font-weight: bold;
-            letter-spacing: 2px;
-        }
-
         .text-center {
             text-align: center;
         }
@@ -228,7 +220,7 @@
             <tr>
                 <td class="item-name">
                     {{ $item->product->name }}<br>
-                    <small style="font-size: 9px;">{{ $item->product->barcode }}</small>
+                    <small style="font-size: 9px;">{{ $item->product->sku }}</small>
                 </td>
                 <td class="item-qty">{{ $item->quantity }}</td>
                 <td class="item-price">{{ config('settings.currency_symbol') }}{{ number_format($item->subtotal, 2) }}</td>
@@ -261,11 +253,6 @@
         <p style="font-size: 10px;">{{ $purchase->notes }}</p>
     </div>
 @endif
-
-<!-- Barcode -->
-<div class="barcode">
-    *{{ str_pad($purchase->id, 6, '0', STR_PAD_LEFT) }}*
-</div>
 
 <!-- Footer -->
 <div class="footer">

@@ -4,6 +4,23 @@ import axios from "axios";
 import Swal from "sweetalert2";
 import { sum } from "lodash";
 
+const currentDateInput = () => {
+    const date = new Date();
+    date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+
+    return date.toISOString().split("T")[0];
+};
+
+const paymentLabels = {
+    cash: "Cash",
+    card: "Card",
+    bank_transfer: "Bank transfer",
+    mobile_money: "Mobile money",
+    jazzcash: "JazzCash",
+    easypaisa: "EasyPaisa",
+    account: "Account",
+};
+
 class Cart extends Component {
     constructor(props) {
         super(props);
@@ -14,7 +31,7 @@ class Cart extends Component {
             categories: [],
             openItems: [],
             customers: [],
-            barcode: "",
+            lookup: "",
             search: "",
             selectedCategoryId: "",
             openItemName: "",
@@ -22,8 +39,7 @@ class Cart extends Component {
             openItemQuantity: "1",
             customer_id: "",
             payment_method: "cash",
-            discount: "0",
-            due_date: "",
+            due_date: currentDateInput(),
             translations: {},
         };
 
@@ -31,8 +47,8 @@ class Cart extends Component {
         this.loadProducts = this.loadProducts.bind(this);
         this.loadQuickItems = this.loadQuickItems.bind(this);
         this.loadCategories = this.loadCategories.bind(this);
-        this.handleOnChangeBarcode = this.handleOnChangeBarcode.bind(this);
-        this.handleScanBarcode = this.handleScanBarcode.bind(this);
+        this.handleOnChangeLookup = this.handleOnChangeLookup.bind(this);
+        this.handleLookupSubmit = this.handleLookupSubmit.bind(this);
         this.handleChangeQty = this.handleChangeQty.bind(this);
         this.handleEmptyCart = this.handleEmptyCart.bind(this);
         this.handleChangeSearch = this.handleChangeSearch.bind(this);
@@ -41,7 +57,7 @@ class Cart extends Component {
         this.handleAddOpenItem = this.handleAddOpenItem.bind(this);
         this.setCustomerId = this.setCustomerId.bind(this);
         this.setPaymentMethod = this.setPaymentMethod.bind(this);
-        this.setDiscount = this.setDiscount.bind(this);
+        this.setItemDiscount = this.setItemDiscount.bind(this);
         this.setDueDate = this.setDueDate.bind(this);
         this.handleClickSubmit = this.handleClickSubmit.bind(this);
         this.loadTranslations = this.loadTranslations.bind(this);
@@ -115,20 +131,20 @@ class Cart extends Component {
         }).catch(() => this.setState({ cart: [] }));
     }
 
-    handleOnChangeBarcode(event) {
-        this.setState({ barcode: event.target.value });
+    handleOnChangeLookup(event) {
+        this.setState({ lookup: event.target.value });
     }
 
-    handleScanBarcode(event) {
+    handleLookupSubmit(event) {
         event.preventDefault();
-        const barcode = this.state.barcode.trim();
-        if (!barcode) return;
+        const search = this.state.lookup.trim();
+        if (!search) return;
 
         axios
-            .post("/admin/cart", { barcode })
+            .post("/admin/cart", { search })
             .then(() => {
                 this.loadCart();
-                this.setState({ barcode: "" });
+                this.setState({ lookup: "" });
             })
             .catch((err) => {
                 Swal.fire("Error!", err.response?.data?.message || "Product not found", "error");
@@ -183,7 +199,7 @@ class Cart extends Component {
         }
 
         this.setState({
-            openItems: [...this.state.openItems, { id: `open-${Date.now()}`, name, price, quantity }],
+            openItems: [...this.state.openItems, { id: `open-${Date.now()}`, name, price, quantity, discount: "" }],
             openItemName: "",
             openItemPrice: "",
             openItemQuantity: "1",
@@ -191,11 +207,20 @@ class Cart extends Component {
     }
 
     getTotal(cart) {
-        const productTotal = cart.map((c) => Number(c.pivot.quantity) * Number(c.price));
-        const openTotal = this.state.openItems.map((item) => item.quantity * item.price);
-        const subtotal = sum(productTotal) + sum(openTotal);
-        const discount = Math.max(Number(this.state.discount) || 0, 0);
-        return Math.max(subtotal - discount, 0).toFixed(2);
+        const productTotal = cart.map((c) => {
+            const lineTotal = Number(c.pivot.quantity) * Number(c.price);
+            const discount = Math.min(Math.max(Number(c.pivot.discount) || 0, 0), lineTotal);
+
+            return lineTotal - discount;
+        });
+        const openTotal = this.state.openItems.map((item) => {
+            const lineTotal = Number(item.quantity) * Number(item.price);
+            const discount = Math.min(Math.max(Number(item.discount) || 0, 0), lineTotal);
+
+            return lineTotal - discount;
+        });
+
+        return Math.max(sum(productTotal) + sum(openTotal), 0).toFixed(2);
     }
 
     getCartCount(cart) {
@@ -231,7 +256,7 @@ class Cart extends Component {
             });
         } else {
             this.setState({
-                cart: [...this.state.cart, { ...product, pivot: { quantity: 1, product_id: product.id, user_id: 1 } }],
+                cart: [...this.state.cart, { ...product, pivot: { quantity: 1, discount: "", product_id: product.id, user_id: 1 } }],
             });
         }
 
@@ -255,8 +280,12 @@ class Cart extends Component {
         this.setState({ payment_method: event.target.value });
     }
 
-    setDiscount(event) {
-        this.setState({ discount: event.target.value });
+    setItemDiscount(product_id, discount) {
+        this.setState({
+            cart: this.state.cart.map((c) =>
+                c.id === product_id ? { ...c, pivot: { ...c.pivot, discount } } : c
+            ),
+        });
     }
 
     setDueDate(event) {
@@ -264,12 +293,26 @@ class Cart extends Component {
     }
 
     handleClickSubmit() {
-        const total = this.getTotal(this.state.cart);
+        const total = Number(this.getTotal(this.state.cart));
+        const selectedMethod = this.state.payment_method;
+        const primaryLabel = paymentLabels[selectedMethod] || "Payment";
+        const primaryDefault = selectedMethod === "account" ? "0.00" : total.toFixed(2);
+        const accountDefault = selectedMethod === "account" ? total.toFixed(2) : "0.00";
         Swal.fire({
-            title: this.state.translations["received_amount"],
+            title: this.state.translations["received_amount"] || "Received Amount",
             html: `
-                <div class="text-left mb-2">${this.state.translations["amount_due"] || "Amount due"}: <strong>${window.APP.currency_symbol} ${total}</strong></div>
-                <input id="checkout-amount" class="swal2-input" type="number" min="0" step="0.01" value="${total}">
+                <div class="checkout-payment-summary">
+                    <span>${this.state.translations["amount_due"] || "Amount due"}</span>
+                    <strong>${window.APP.currency_symbol} ${total.toFixed(2)}</strong>
+                </div>
+                <label class="checkout-payment-field">
+                    <span>${primaryLabel} received</span>
+                    <input id="checkout-primary-amount" class="swal2-input" type="number" min="0" step="0.01" value="${primaryDefault}">
+                </label>
+                <label class="checkout-payment-field">
+                    <span>Account / credit</span>
+                    <input id="checkout-account-amount" class="swal2-input" type="number" min="0" step="0.01" value="${accountDefault}">
+                </label>
             `,
             focusConfirm: false,
             cancelButtonText: this.state.translations["cancel_pay"],
@@ -277,23 +320,66 @@ class Cart extends Component {
             confirmButtonText: this.state.translations["confirm_pay"],
             showLoaderOnConfirm: true,
             preConfirm: () => {
-                const amount = document.getElementById("checkout-amount").value;
+                const primaryAmount = Number(document.getElementById("checkout-primary-amount").value || 0);
+                const accountAmount = Number(document.getElementById("checkout-account-amount").value || 0);
+                const paidTotal = Number((primaryAmount + accountAmount).toFixed(2));
+
+                if (primaryAmount < 0 || accountAmount < 0) {
+                    Swal.showValidationMessage("Payment amounts cannot be negative.");
+                    return false;
+                }
+
+                if (paidTotal <= 0) {
+                    Swal.showValidationMessage("Enter a received or account amount.");
+                    return false;
+                }
+
+                if (paidTotal > total + 0.00001) {
+                    Swal.showValidationMessage("Payment total cannot be greater than the sale total.");
+                    return false;
+                }
+
+                if (accountAmount > 0 && !this.state.customer_id) {
+                    Swal.showValidationMessage("Select a customer before putting any amount on account.");
+                    return false;
+                }
+
+                const primaryMethod = selectedMethod === "account" ? "cash" : selectedMethod;
+                const payments = [
+                    primaryAmount > 0 ? { method: primaryMethod, amount: primaryAmount.toFixed(2) } : null,
+                    accountAmount > 0 ? { method: "account", amount: accountAmount.toFixed(2) } : null,
+                ].filter(Boolean);
+
                 return axios
                     .post("/admin/orders", {
                         customer_id: this.state.customer_id,
-                        amount,
+                        amount: primaryAmount.toFixed(2),
                         payment_method: this.state.payment_method,
-                        discount: this.state.discount,
+                        payments,
+                        item_discounts: this.state.cart.reduce((discounts, item) => ({
+                            ...discounts,
+                            [item.id]: item.pivot.discount || 0,
+                        }), {}),
                         due_date: this.state.due_date,
                         custom_items: this.state.openItems.map((item) => ({
                             name: item.name,
                             price: item.price,
                             quantity: item.quantity,
+                            discount: item.discount || 0,
                         })),
                     })
                     .then((res) => {
                         this.loadCart();
-                        this.setState({ openItems: [] });
+                        this.loadProducts("", this.state.selectedCategoryId);
+                        this.loadQuickItems();
+                        this.setState({
+                            openItems: [],
+                            customer_id: "",
+                            payment_method: "cash",
+                            due_date: currentDateInput(),
+                            lookup: "",
+                            search: "",
+                        });
                         return res.data;
                     })
                     .catch((err) => {
@@ -327,10 +413,9 @@ class Cart extends Component {
             categories = [],
             openItems = [],
             customers = [],
-            barcode = "",
+            lookup = "",
             translations = {},
             payment_method = "cash",
-            discount = "0",
             due_date = "",
             selectedCategoryId = "",
         } = this.state;
@@ -377,13 +462,13 @@ class Cart extends Component {
                                 </button>
                             </div>
 
-                            <form onSubmit={this.handleScanBarcode} className="mb-2">
+                            <form onSubmit={this.handleLookupSubmit} className="mb-2">
                                 <input
                                     type="text"
                                     className="form-control"
-                                    placeholder={translations["scan_barcode"] || "Search or scan by barcode, SKU, short code, or product name"}
-                                    value={barcode}
-                                    onChange={this.handleOnChangeBarcode}
+                                    placeholder={translations["search_product"] || "Search by SKU, short code, or product name"}
+                                    value={lookup}
+                                    onChange={this.handleOnChangeLookup}
                                 />
                             </form>
 
@@ -424,11 +509,11 @@ class Cart extends Component {
                                 </div>
                             </form>
 
-                            <select className="form-control mb-2" onChange={this.setCustomerId}>
+                            <select className="form-control mb-2" value={this.state.customer_id} onChange={this.setCustomerId}>
                                 <option value="">{translations["general_customer"] || "General Customer"}</option>
                                 {customers.map((cus) => (
                                     <option key={cus.id} value={cus.id}>
-                                        {`${cus.customer_code || `CUST-${String(cus.id).padStart(6, "0")}`} - ${cus.first_name} ${cus.last_name}`}
+                                        {`${cus.customer_code || "No code"} - ${cus.first_name} ${cus.last_name}`}
                                     </option>
                                 ))}
                             </select>
@@ -444,15 +529,6 @@ class Cart extends Component {
                             </select>
 
                             <div className="d-flex mb-3">
-                                <input
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    className="form-control mr-2"
-                                    placeholder={translations["discount"] || "Discount"}
-                                    value={discount}
-                                    onChange={this.setDiscount}
-                                />
                                 <input
                                     type="date"
                                     className="form-control"
@@ -475,17 +551,34 @@ class Cart extends Component {
                                                     <strong>{c.name}</strong>
                                                     <span>{window.APP.currency_symbol} {Number(c.price).toFixed(2)}</span>
                                                 </div>
-                                                <div className="cart-line-actions">
-                                                    <input
-                                                        type="number"
-                                                        min="1"
-                                                        step="1"
-                                                        className="form-control form-control-sm qty"
-                                                        value={c.pivot.quantity === "" ? "" : parseInt(c.pivot.quantity, 10)}
-                                                        onChange={(event) => this.handleChangeQty(c.id, event.target.value)}
-                                                    />
-                                                    <span>{window.APP.currency_symbol} {(c.price * c.pivot.quantity).toFixed(2)}</span>
-                                                    <button className="btn btn-outline-danger btn-sm" onClick={() => this.handleClickDelete(c.id)}>
+                                                <div className="cart-line-fields">
+                                                    <label>
+                                                        <span>{translations["quantity"] || "Qty"}</span>
+                                                        <input
+                                                            type="number"
+                                                            min="1"
+                                                            step="1"
+                                                            className="form-control form-control-sm"
+                                                            value={c.pivot.quantity === "" ? "" : parseInt(c.pivot.quantity, 10)}
+                                                            onChange={(event) => this.handleChangeQty(c.id, event.target.value)}
+                                                        />
+                                                    </label>
+                                                    <label>
+                                                        <span>{translations["discount"] || "Discount"}</span>
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            step="0.01"
+                                                            className="form-control form-control-sm"
+                                                            value={c.pivot.discount || ""}
+                                                            onChange={(event) => this.setItemDiscount(c.id, event.target.value)}
+                                                        />
+                                                    </label>
+                                                    <div className="line-total">
+                                                        <span>{translations["total"] || "Total"}</span>
+                                                        <strong>{window.APP.currency_symbol} {Math.max((c.price * c.pivot.quantity) - (Number(c.pivot.discount) || 0), 0).toFixed(2)}</strong>
+                                                    </div>
+                                                    <button className="btn btn-outline-danger btn-sm line-remove" onClick={() => this.handleClickDelete(c.id)}>
                                                         <i className="fas fa-trash"></i>
                                                     </button>
                                                 </div>
@@ -497,25 +590,49 @@ class Cart extends Component {
                                                     <strong>{item.name}</strong>
                                                     <span>{window.APP.currency_symbol} {Number(item.price).toFixed(2)}</span>
                                                 </div>
-                                                <div className="cart-line-actions">
-                                                    <input
-                                                        type="number"
-                                                        min="1"
-                                                        step="1"
-                                                        className="form-control form-control-sm qty"
-                                                        value={item.quantity}
-                                                        onChange={(event) => {
-                                                            const quantity = parseInt(event.target.value, 10);
-                                                            this.setState({
-                                                                openItems: openItems.map((openItem) =>
-                                                                    openItem.id === item.id ? { ...openItem, quantity } : openItem
-                                                                ),
-                                                            });
-                                                        }}
-                                                    />
-                                                    <span>{window.APP.currency_symbol} {(item.price * item.quantity).toFixed(2)}</span>
+                                                <div className="cart-line-fields">
+                                                    <label>
+                                                        <span>{translations["quantity"] || "Qty"}</span>
+                                                        <input
+                                                            type="number"
+                                                            min="1"
+                                                            step="1"
+                                                            className="form-control form-control-sm"
+                                                            value={item.quantity}
+                                                            onChange={(event) => {
+                                                                const quantity = parseInt(event.target.value, 10);
+                                                                this.setState({
+                                                                    openItems: openItems.map((openItem) =>
+                                                                        openItem.id === item.id ? { ...openItem, quantity } : openItem
+                                                                    ),
+                                                                });
+                                                            }}
+                                                        />
+                                                    </label>
+                                                    <label>
+                                                        <span>{translations["discount"] || "Discount"}</span>
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            step="0.01"
+                                                            className="form-control form-control-sm"
+                                                            value={item.discount || ""}
+                                                            onChange={(event) => {
+                                                                const discount = event.target.value;
+                                                                this.setState({
+                                                                    openItems: openItems.map((openItem) =>
+                                                                        openItem.id === item.id ? { ...openItem, discount } : openItem
+                                                                    ),
+                                                                });
+                                                            }}
+                                                        />
+                                                    </label>
+                                                    <div className="line-total">
+                                                        <span>{translations["total"] || "Total"}</span>
+                                                        <strong>{window.APP.currency_symbol} {Math.max((item.price * item.quantity) - (Number(item.discount) || 0), 0).toFixed(2)}</strong>
+                                                    </div>
                                                     <button
-                                                        className="btn btn-outline-danger btn-sm"
+                                                        className="btn btn-outline-danger btn-sm line-remove"
                                                         onClick={() => this.setState({ openItems: openItems.filter((openItem) => openItem.id !== item.id) })}
                                                     >
                                                         <i className="fas fa-trash"></i>
@@ -545,7 +662,7 @@ class Cart extends Component {
                                 <input
                                     type="text"
                                     className="form-control"
-                                    placeholder={translations["search_product"] || "Search or scan by barcode, SKU, short code, or product name"}
+                                    placeholder={translations["search_product"] || "Search by SKU, short code, or product name"}
                                     value={this.state.search}
                                     onChange={this.handleChangeSearch}
                                     onKeyDown={this.handleSeach}

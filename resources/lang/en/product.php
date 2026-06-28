@@ -35,7 +35,6 @@ return [
     'Description'       => 'Description',
     'Image'             => 'Image',
     'Choose_file'       => 'Choose file',
-    'Barcode'           => 'Barcode',
     'Price'             => 'Price',
     'Quantity'          => 'Quantity',
     'Status'            => 'Status',

@@ -12,6 +12,18 @@
                 @csrf
 
                 <div class="form-group">
+                    <label for="customer_code">Customer Code</label>
+                    <input type="text" name="customer_code" class="form-control @error('customer_code') is-invalid @enderror"
+                           id="customer_code"
+                           placeholder="Customer Code" value="{{ old('customer_code') }}" required>
+                    @error('customer_code')
+                    <span class="invalid-feedback" role="alert">
+                        <strong>{{ $message }}</strong>
+                    </span>
+                    @enderror
+                </div>
+
+                <div class="form-group">
                     <label for="first_name">{{ __('customer.First_Name') }}</label>
                     <input type="text" name="first_name" class="form-control @error('first_name') is-invalid @enderror"
                            id="first_name"
@@ -63,6 +75,18 @@
                            id="address"
                            placeholder="{{ __('customer.Address') }}" value="{{ old('address') }}">
                     @error('address')
+                    <span class="invalid-feedback" role="alert">
+                        <strong>{{ $message }}</strong>
+                    </span>
+                    @enderror
+                </div>
+
+                <div class="form-group">
+                    <label for="pending_amount">Pending Amount</label>
+                    <input type="number" min="0" step="0.01" name="pending_amount" class="form-control @error('pending_amount') is-invalid @enderror"
+                           id="pending_amount"
+                           placeholder="Pending Amount" value="{{ old('pending_amount', 0) }}">
+                    @error('pending_amount')
                     <span class="invalid-feedback" role="alert">
                         <strong>{{ $message }}</strong>
                     </span>

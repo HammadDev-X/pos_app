@@ -156,7 +156,7 @@ class Purchase extends Component {
 
         // Sync with backend
         axios
-            .post("/admin/purchase-cart", { barcode: product.barcode })
+            .post("/admin/purchase-cart", { product_id: product.id })
             .then((res) => {
                 console.log("Added to cart:", res.data);
             })

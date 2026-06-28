@@ -9,6 +9,7 @@
 @endsection
 
 @section('content')
+@php($canDeleteExpenses = auth()->user()?->isManager())
 <div class="row">
     <div class="col-md-3">
         <div class="small-box bg-danger">
@@ -131,7 +132,9 @@
                         <th>Amount</th>
                         <th>Description</th>
                         <th>Recorded By</th>
-                        <th>Actions</th>
+                        @if($canDeleteExpenses)
+                            <th>Actions</th>
+                        @endif
                     </tr>
                 </thead>
                 <tbody>
@@ -142,17 +145,19 @@
                             <td>{{ config('settings.currency_symbol') }}{{ number_format((float) $expense->amount, 2) }}</td>
                             <td>{{ $expense->description }}</td>
                             <td>{{ $expense->user->getFullname() }}</td>
-                            <td>
-                                <form method="POST" action="{{ route('expenses.destroy', $expense) }}" onsubmit="return confirm('Delete this expense?')" class="d-inline">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button class="btn btn-danger btn-sm" type="submit"><i class="fas fa-trash"></i></button>
-                                </form>
-                            </td>
+                            @if($canDeleteExpenses)
+                                <td>
+                                    <form method="POST" action="{{ route('expenses.destroy', $expense) }}" onsubmit="return confirm('Delete this expense?')" class="d-inline">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button class="btn btn-danger btn-sm" type="submit"><i class="fas fa-trash"></i></button>
+                                    </form>
+                                </td>
+                            @endif
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="text-center text-muted py-4">No expenses found</td>
+                            <td colspan="{{ $canDeleteExpenses ? 6 : 5 }}" class="text-center text-muted py-4">No expenses found</td>
                         </tr>
                     @endforelse
                 </tbody>

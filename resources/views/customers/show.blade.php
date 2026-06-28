@@ -27,6 +27,7 @@
                     </div>
                 </div>
                 <hr>
+                <p class="mb-1"><strong>Opening Pending:</strong> {{ $currency }} {{ number_format($openingBalance, 2) }}</p>
                 <p class="mb-1"><strong>Total Sales:</strong> {{ $currency }} {{ number_format($totalSales, 2) }}</p>
                 <p class="mb-1"><strong>Paid / Recovered:</strong> {{ $currency }} {{ number_format($totalPaid, 2) }}</p>
                 <p class="mb-3"><strong>Pending Balance:</strong> {{ $currency }} {{ number_format($balance, 2) }}</p>

@@ -10,6 +10,7 @@ use Illuminate\Support\Carbon;
 /**
  * @property int $id
  * @property float $price
+ * @property float $discount
  * @property float $quantity
  * @property int $order_id
  * @property int|null $product_id
@@ -34,6 +35,7 @@ class OrderItem extends Model
 {
     protected $fillable = [
         'price',
+        'discount',
         'quantity',
         'unit_cost',
         'returned_quantity',
@@ -44,6 +46,7 @@ class OrderItem extends Model
 
     protected $casts = [
         'price' => 'float',
+        'discount' => 'float',
         'quantity' => 'float',
         'unit_cost' => 'float',
         'returned_quantity' => 'float',
@@ -70,7 +73,22 @@ class OrderItem extends Model
      */
     public function subtotal(): float
     {
-        return $this->price;
+        return $this->netSubtotal();
+    }
+
+    public function grossSubtotal(): float
+    {
+        return (float) $this->price;
+    }
+
+    public function discountAmount(): float
+    {
+        return min((float) $this->discount, $this->grossSubtotal());
+    }
+
+    public function netSubtotal(): float
+    {
+        return max($this->grossSubtotal() - $this->discountAmount(), 0);
     }
 
     /**
@@ -78,7 +96,12 @@ class OrderItem extends Model
      */
     public function unitPrice(): float
     {
-        return $this->quantity > 0 ? $this->price / $this->quantity : 0;
+        return $this->quantity > 0 ? $this->grossSubtotal() / $this->quantity : 0;
+    }
+
+    public function netUnitPrice(): float
+    {
+        return $this->quantity > 0 ? $this->netSubtotal() / $this->quantity : 0;
     }
 
     public function returnableQuantity(): float
@@ -88,7 +111,26 @@ class OrderItem extends Model
 
     public function returnedAmount(): float
     {
+        return $this->netUnitPrice() * (float) $this->returned_quantity;
+    }
+
+    public function grossReturnedAmount(): float
+    {
         return $this->unitPrice() * (float) $this->returned_quantity;
+    }
+
+    public function returnedDiscountAmount(): float
+    {
+        if ((float) $this->quantity <= 0) {
+            return 0;
+        }
+
+        return $this->discountAmount() * ((float) $this->returned_quantity / (float) $this->quantity);
+    }
+
+    public function netSales(): float
+    {
+        return max($this->netUnitPrice() * $this->netQuantity(), 0);
     }
 
     public function netQuantity(): float

@@ -12,7 +12,7 @@ return new class extends Migration
         // Add new columns if they do not exist and adjust existing columns
         Schema::table('products', function (Blueprint $table): void {
             if (!Schema::hasColumn('products', 'sku')) {
-                $table->string('sku')->nullable()->unique()->after('barcode');
+                $table->string('sku')->nullable()->unique()->after('image');
             }
             if (!Schema::hasColumn('products', 'short_code')) {
                 $table->string('short_code')->nullable()->unique()->after('sku');
@@ -28,15 +28,11 @@ return new class extends Migration
             }
         });
 
-        // Make barcode nullable and ensure unique when provided
-        // Use raw statements to avoid requiring doctrine/dbal for column changes
+        // Use raw statements to avoid requiring doctrine/dbal for column changes.
         $connection = config('database.default');
         $driver = config("database.connections.{$connection}.driver");
 
         if ($driver === 'mysql') {
-            // Make barcode nullable
-            DB::statement('ALTER TABLE `products` MODIFY `barcode` VARCHAR(255) NULL');
-
             // Change quantity from integer to decimal(10,2)
             if (Schema::hasColumn('products', 'quantity')) {
                 DB::statement('ALTER TABLE `products` MODIFY `quantity` DECIMAL(10,2) NOT NULL DEFAULT 1');
@@ -47,7 +43,6 @@ return new class extends Migration
                 if (Schema::hasColumn('products', 'quantity')) {
                     $table->decimal('quantity', 10, 2)->default(1)->change();
                 }
-                $table->string('barcode')->nullable()->change();
             });
         }
 
@@ -102,12 +97,11 @@ return new class extends Migration
             }
         });
 
-        // Revert barcode and quantity changes if possible
+        // Revert quantity changes if possible
         $connection = config('database.default');
         $driver = config("database.connections.{$connection}.driver");
 
         if ($driver === 'mysql') {
-            DB::statement('ALTER TABLE `products` MODIFY `barcode` VARCHAR(255) NOT NULL');
             if (Schema::hasColumn('products', 'quantity')) {
                 DB::statement('ALTER TABLE `products` MODIFY `quantity` INT NOT NULL DEFAULT 1');
             }

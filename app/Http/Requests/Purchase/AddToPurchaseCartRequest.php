@@ -14,15 +14,15 @@ class AddToPurchaseCartRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'barcode' => 'required|string|exists:products,barcode',
+            'product_id' => 'required|integer|exists:products,id',
         ];
     }
 
     public function messages(): array
     {
         return [
-            'barcode.required' => __('Barcode is required'),
-            'barcode.exists' => __('Product not found with this barcode'),
+            'product_id.required' => __('Product is required'),
+            'product_id.exists' => __('Product not found'),
         ];
     }
 }

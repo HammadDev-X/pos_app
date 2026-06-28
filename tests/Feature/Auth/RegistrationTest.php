@@ -10,6 +10,7 @@ beforeEach(function () {
         'first_name' => 'John',
         'last_name' => 'Doe',
         'email' => 'john.doe@example.com',
+        'role' => User::ROLE_SALESMAN,
         'password' => 'Password123!',
         'password_confirmation' => 'Password123!',
     ];
@@ -20,7 +21,9 @@ describe('Registration Screen', function () {
         $this->get('/register')
             ->assertOk()
             ->assertViewIs('auth.register')
-            ->assertSee('Register');
+            ->assertSee('Register')
+            ->assertSee('Salesman')
+            ->assertSee('Manager');
     });
 
     test('redirects authenticated users away from register page', function () {
@@ -44,7 +47,28 @@ describe('User Registration', function () {
             'first_name' => 'John',
             'last_name' => 'Doe',
             'email' => 'john.doe@example.com',
+            'role' => User::ROLE_SALESMAN,
         ]);
+    });
+
+    test('new users can register as manager', function () {
+        $this->post(route('register'), array_merge($this->validData, [
+            'role' => User::ROLE_MANAGER,
+        ]))->assertRedirect(route('home'))
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'john.doe@example.com',
+            'role' => User::ROLE_MANAGER,
+        ]);
+    });
+
+    test('registration rejects unsupported roles', function () {
+        $this->post(route('register'), array_merge($this->validData, [
+            'role' => User::ROLE_ADMIN,
+        ]))->assertSessionHasErrors('role');
+
+        $this->assertGuest();
     });
 
     test('user password is hashed after registration', function () {

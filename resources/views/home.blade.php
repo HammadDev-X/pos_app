@@ -10,6 +10,7 @@
 @endsection
 
 @section('content')
+@php($canManage = auth()->user()?->isManager())
 <div class="container-fluid dashboard-page">
     <div class="dashboard-metrics">
         <a href="{{ route('orders.index') }}" class="metric-card metric-sales">
@@ -17,7 +18,7 @@
             <strong>{{ config('settings.currency_symbol') }} {{ number_format($income_today, 2) }}</strong>
             <small>{{ __('dashboard.today_sales_hint') }}</small>
         </a>
-        <a href="{{ route('reports.business') }}" class="metric-card metric-sales">
+        <a href="{{ $canManage ? route('reports.business') : route('orders.index') }}" class="metric-card metric-sales">
             <span>This Month’s Sales</span>
             <strong>{{ config('settings.currency_symbol') }} {{ number_format($sales_this_month, 2) }}</strong>
             <small>Month-to-date invoice total</small>
@@ -47,7 +48,7 @@
             <strong>{{ config('settings.currency_symbol') }} {{ number_format($total_receivable, 2) }}</strong>
             <small>{{ $customers_with_balance_count }} customers with balance</small>
         </a>
-        <a href="{{ route('reports.business') }}" class="metric-card metric-customers">
+        <a href="{{ $canManage ? route('reports.business') : route('expenses.index') }}" class="metric-card metric-customers">
             <span>Net Profit Today</span>
             <strong>{{ config('settings.currency_symbol') }} {{ number_format($net_profit_today, 2) }}</strong>
             <small>{{ config('settings.currency_symbol') }} {{ number_format($expenses_today, 2) }} expenses</small>
@@ -247,7 +248,7 @@
                             <img src="{{ $product->image_url }}" alt="{{ $product->name }}">
                             <div>
                                 <strong>{{ $product->name }}</strong>
-                                <span>{{ $product->barcode }}</span>
+                                <span>{{ $product->sku }}</span>
                             </div>
                             <span class="badge badge-{{ $product->quantity <= 0 ? 'danger' : 'warning' }}">{{ $product->quantity }}</span>
                         </div>
@@ -269,7 +270,7 @@
                     <thead>
                         <tr>
                             <th>{{ __('product.Name') }}</th>
-                            <th>{{ __('product.Barcode') }}</th>
+                            <th>SKU</th>
                             <th>{{ __('product.Price') }}</th>
                             <th>{{ __('product.Quantity') }}</th>
                             <th>{{ __('dashboard.units_sold') }}</th>
@@ -279,7 +280,7 @@
                         @forelse($best_selling_products as $product)
                             <tr>
                                 <td>{{ $product->name }}</td>
-                                <td>{{ $product->barcode }}</td>
+                                <td>{{ $product->sku }}</td>
                                 <td>{{ config('settings.currency_symbol') }} {{ number_format((float) $product->price, 2) }}</td>
                                 <td>{{ $product->quantity }}</td>
                                 <td>{{ $product->total_sold }}</td>

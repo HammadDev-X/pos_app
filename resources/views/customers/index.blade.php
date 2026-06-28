@@ -3,7 +3,9 @@
 @section('title', __('customer.Customer_List'))
 @section('content-header', __('customer.Customer_List'))
 @section('content-actions')
-<a href="{{route('customers.create')}}" class="btn btn-primary">{{ __('customer.Add_Customer') }}</a>
+<a href="{{route('customers.create')}}" class="btn btn-primary">
+    <i class="fas fa-user-plus mr-1"></i>{{ __('customer.Add_Customer') }}
+</a>
 @endsection
 @section('css')
 <link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
@@ -11,17 +13,17 @@
 @section('content')
 <div class="card">
     <div class="card-body">
-        <table class="table">
+        @php($canDeleteCustomers = auth()->user()?->isManager())
+        <div class="table-responsive customer-table-wrap">
+        <table class="table table-hover customer-table mb-0">
             <thead>
                 <tr>
-                    <th>{{ __('customer.ID') }}</th>
-                    <th>Customer Code</th>
-                    <th>{{ __('customer.Avatar') }}</th>
-                    <th>{{ __('customer.First_Name') }}</th>
-                    <th>{{ __('customer.Last_Name') }}</th>
+                    <th>Customer</th>
+                    <th>Code</th>
                     <th>{{ __('customer.Email') }}</th>
                     <th>{{ __('customer.Phone') }}</th>
                     <th>{{ __('customer.Address') }}</th>
+                    <th>Previous Amount</th>
                     <th>{{ __('common.Created_At') }}</th>
                     <th>{{ __('customer.Actions') }}</th>
                 </tr>
@@ -29,26 +31,33 @@
             <tbody>
                 @foreach ($customers as $customer)
                 <tr>
-                    <td>{{$customer->id}}</td>
-                    <td><span class="badge badge-info">{{ $customer->customer_code }}</span></td>
                     <td>
-                        <img width="50" src="{{$customer->getAvatarUrl()}}" alt="">
+                        <div class="customer-identity">
+                            <img src="{{$customer->getAvatarUrl()}}" alt="{{$customer->full_name}}">
+                            <div>
+                                <strong>{{$customer->full_name}}</strong>
+                                <span>ID #{{$customer->id}}</span>
+                            </div>
+                        </div>
                     </td>
-                    <td>{{$customer->first_name}}</td>
-                    <td>{{$customer->last_name}}</td>
-                    <td>{{$customer->email}}</td>
-                    <td>{{$customer->phone}}</td>
-                    <td>{{$customer->address}}</td>
-                    <td>{{$customer->created_at}}</td>
-                    <td>
-                        <a href="{{ route('customers.edit', $customer) }}" class="btn btn-primary"><i class="fas fa-edit"></i></a>
-                        <a href="{{ route('customers.show', $customer) }}" class="btn btn-info"><i class="fas fa-book"></i></a>
-                        <button class="btn btn-danger btn-delete" data-url="{{route('customers.destroy', $customer)}}"><i class="fas fa-trash"></i></button>
+                    <td><span class="badge badge-info">{{ $customer->customer_code }}</span></td>
+                    <td class="text-break">{{$customer->email ?: '-'}}</td>
+                    <td class="text-nowrap">{{$customer->phone ?: '-'}}</td>
+                    <td class="customer-address">{{$customer->address ?: '-'}}</td>
+                    <td class="text-nowrap">{{ config('settings.currency_symbol') }} {{ number_format((float) $customer->pending_amount, 2) }}</td>
+                    <td class="text-nowrap">{{$customer->created_at?->format('Y-m-d')}}</td>
+                    <td class="customer-actions">
+                        <a href="{{ route('customers.show', $customer) }}" class="btn btn-info btn-sm" title="Ledger"><i class="fas fa-book"></i></a>
+                        <a href="{{ route('customers.edit', $customer) }}" class="btn btn-primary btn-sm" title="Edit"><i class="fas fa-edit"></i></a>
+                        @if($canDeleteCustomers)
+                            <button class="btn btn-danger btn-sm btn-delete" data-url="{{route('customers.destroy', $customer)}}" title="Delete"><i class="fas fa-trash"></i></button>
+                        @endif
                     </td>
                 </tr>
                 @endforeach
             </tbody>
         </table>
+        </div>
         {{ $customers->render() }}
     </div>
 </div>

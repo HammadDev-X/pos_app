@@ -29,7 +29,7 @@ class PurchaseCartController extends Controller
             return [
                 'id' => $item->id,
                 'name' => $item->name,
-                'barcode' => $item->barcode,
+                'sku' => $item->sku,
                 'image_url' => $item->image_url,
                 'pivot' => [
                     'quantity' => $item->pivot->quantity,
@@ -48,7 +48,7 @@ class PurchaseCartController extends Controller
      */
     public function store(AddToPurchaseCartRequest $request): JsonResponse
     {
-        $product = Product::where('barcode', $request->input('barcode'))->first();
+        $product = Product::find($request->integer('product_id'));
 
         if (!$product) {
             return response()->json([

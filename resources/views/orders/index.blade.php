@@ -21,7 +21,9 @@
                                 <input type="date" name="end_date" class="form-control" value="{{request('end_date')}}" />
                             </div>
                             <div class="col-sm-2">
-                                <button class="btn btn-outline-primary btn-block" type="submit">{{ __('order.submit') }}</button>
+                                <button class="btn btn-primary btn-block order-filter-submit" type="submit">
+                                    <i class="fas fa-filter mr-1"></i>{{ __('order.submit') }}
+                                </button>
                             </div>
                         </div>
                     </form>
@@ -48,12 +50,12 @@
                         $orderTotal = $order->total();
                         $orderReceived = $order->receivedAmount();
                         $orderRemaining = $orderTotal - $orderReceived;
-                        $orderDiscount = $order->discountAmount();
                         $customerMobile = $order->customer?->phone ?: 'N/A';
                         $invoiceItems = $order->items->map(fn ($item): array => [
                             'name' => $item->product?->name ?? $item->custom_item_name ?? 'Product removed',
                             'quantity' => (int) $item->quantity,
                             'rate' => $item->unitPrice(),
+                            'discount' => $item->discountAmount(),
                             'total' => $item->subtotal(),
                         ]);
                     @endphp
@@ -86,7 +88,6 @@
                                 data-customer-mobile="{{ $customerMobile }}"
                                 data-total="{{ $orderTotal }}"
                                 data-received="{{ $orderReceived }}"
-                                data-discount="{{ $orderDiscount }}"
                                 data-balance="{{ max($orderRemaining, 0) }}"
                                 data-items='@json($invoiceItems, JSON_HEX_APOS)'
                                 data-created-at="{{ $order->created_at }}">
@@ -227,7 +228,6 @@
                 var customerMobile = button.data('customer-mobile') || 'N/A';
                 var totalAmount = button.data('total');
                 var receivedAmount = button.data('received');
-                var discountAmount = button.data('discount') || 0;
                 var balanceAmount = button.data('balance') || Math.max(totalAmount - receivedAmount, 0);
                 var createdAt = button.data('created-at');
                 var items = button.data('items');
@@ -249,11 +249,12 @@
                             '<td>' + escapeHtml(item.name || 'N/A') + '</td>' +
                             '<td>' + parseInt(item.quantity || 0, 10) + '</td>' +
                             '<td>' + currencySymbol + ' ' + parseFloat(item.rate || 0).toFixed(2) + '</td>' +
+                            '<td>' + currencySymbol + ' ' + parseFloat(item.discount || 0).toFixed(2) + '</td>' +
                             '<td>' + currencySymbol + ' ' + parseFloat(item.total || 0).toFixed(2) + '</td>' +
                             '</tr>';
                     });
                 } else {
-                    itemsHTML = '<tr><td colspan="5" class="text-center">No items found</td></tr>';
+                    itemsHTML = '<tr><td colspan="6" class="text-center">No items found</td></tr>';
                 }
 
                 var modalBody = $('#modalInvoice').find('.modal-body');
@@ -286,25 +287,22 @@
                     '<th>Product</th>' +
                     '<th>Quantity</th>' +
                     '<th>Rate</th>' +
+                    '<th>Discount</th>' +
                     '<th>Total</th>' +
                     '</tr>' +
                     '</thead>' +
                     '<tbody>' + itemsHTML + '</tbody>' +
                     '<tfoot>' +
                     '<tr>' +
-                    '<th colspan="4" class="text-right">Discount</th>' +
-                    '<th>-' + currencySymbol + ' ' + parseFloat(discountAmount).toFixed(2) + '</th>' +
-                    '</tr>' +
-                    '<tr>' +
-                    '<th colspan="4" class="text-right">Grand Total</th>' +
+                    '<th colspan="5" class="text-right">Grand Total</th>' +
                     '<th>' + currencySymbol + ' ' + parseFloat(totalAmount).toFixed(2) + '</th>' +
                     '</tr>' +
                     '<tr>' +
-                    '<th colspan="4" class="text-right">Paid Amount</th>' +
+                    '<th colspan="5" class="text-right">Paid Amount</th>' +
                     '<th>' + currencySymbol + ' ' + parseFloat(receivedAmount).toFixed(2) + '</th>' +
                     '</tr>' +
                     '<tr>' +
-                    '<th colspan="4" class="text-right">Remaining Balance</th>' +
+                    '<th colspan="5" class="text-right">Remaining Balance</th>' +
                     '<th>' + currencySymbol + ' ' + parseFloat(balanceAmount).toFixed(2) + '</th>' +
                     '</tr>' +
                     '</tfoot>' +

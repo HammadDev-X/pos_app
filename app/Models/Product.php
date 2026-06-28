@@ -17,7 +17,6 @@ use Illuminate\Support\Facades\Storage;
  * @property string $name
  * @property string|null $description
  * @property string|null $image
- * @property string|null $barcode
  * @property string $sku
  * @property string|null $short_code
  * @property numeric $price
@@ -37,7 +36,6 @@ use Illuminate\Support\Facades\Storage;
  * @method static Builder<static>|Product pastMonthsHotProducts()
  * @method static Builder<static>|Product query()
  * @method static Builder<static>|Product search($term)
- * @method static Builder<static>|Product whereBarcode($value)
  * @method static Builder<static>|Product whereCreatedAt($value)
  * @method static Builder<static>|Product whereDescription($value)
  * @method static Builder<static>|Product whereId($value)
@@ -60,7 +58,6 @@ class Product extends Model
         'category_id',
         'description',
         'image',
-        'barcode',
         'sku',
         'short_code',
         'price',
@@ -94,7 +91,6 @@ class Product extends Model
     protected static function booted(): void
     {
         static::saving(function (Product $product): void {
-            $product->barcode = static::cleanOptionalCode($product->barcode);
             $product->short_code = static::cleanOptionalCode($product->short_code);
             $product->sku = blank($product->sku) ? null : trim((string) $product->sku);
             $product->unit = blank($product->unit) ? 'piece' : trim((string) $product->unit);

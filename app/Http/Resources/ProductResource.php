@@ -9,7 +9,6 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * @property-read string $name
  * @property-read string|null $description
  * @property-read string|null $image
- * @property-read string|null $barcode
  * @property-read string $sku
  * @property-read string|null $unit
  * @property-read float $price
@@ -35,7 +34,6 @@ class ProductResource extends JsonResource
             'name' => $this->name,
             'description' => $this->description,
             'image' => $this->image,
-            'barcode' => $this->barcode,
             'sku' => $this->sku,
             'unit' => $this->unit,
             'category_id' => $this->category_id,

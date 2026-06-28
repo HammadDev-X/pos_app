@@ -26,12 +26,6 @@ class ProductUpdateRequest extends FormRequest
                 'max:50',
                 Rule::unique('products', 'sku')->ignore($this->product)
             ],
-            'barcode' => [
-                'nullable',
-                'string',
-                'max:50',
-                Rule::unique('products', 'barcode')->ignore($this->product)
-            ],
             'short_code' => [
                 'nullable',
                 'string',
@@ -55,7 +49,6 @@ class ProductUpdateRequest extends FormRequest
     {
         $this->merge([
             'sku' => $this->cleanString($this->input('sku')),
-            'barcode' => $this->cleanString($this->input('barcode')),
             'short_code' => $this->cleanString($this->input('short_code')),
             'unit' => $this->cleanString($this->input('unit')),
         ]);
@@ -64,9 +57,6 @@ class ProductUpdateRequest extends FormRequest
             $this->merge(['sku' => Product::generateSku()]);
         }
 
-        if (!$this->filled('barcode')) {
-            $this->merge(['barcode' => null]);
-        }
         if (!$this->filled('short_code')) {
             $this->merge(['short_code' => null]);
         }
@@ -96,8 +86,6 @@ class ProductUpdateRequest extends FormRequest
     {
         return [
             'name.required' => __('product.validation.name_required'),
-            'barcode.required' => __('product.validation.barcode_required'),
-            'barcode.unique' => __('product.validation.barcode_unique'),
             'price.required' => __('product.validation.price_required'),
             'price.decimal' => __('product.validation.price_decimal'),
             'quantity.required' => __('product.validation.quantity_required'),

@@ -8,6 +8,7 @@ use App\Http\Requests\Order\PartialPaymentRequest;
 use App\Models\AuditLog;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Payment;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -42,7 +43,7 @@ class OrderController extends Controller
                 $order = Order::create([
                     'customer_id' => $request->customer_id,
                     'user_id' => $request->user()->id,
-                    'discount' => $request->input('discount', 0),
+                    'discount' => 0,
                     'due_date' => $request->input('due_date'),
                     'status' => 'active',
                 ]);
@@ -58,7 +59,7 @@ class OrderController extends Controller
 
                 // Create order items and update product quantities
                 foreach ($cartItems as $item) {
-                    $this->createOrderItem($order, $item);
+                    $this->createOrderItem($order, $item, (float) $request->input("item_discounts.{$item->id}", 0));
                     $this->reduceProductStock($item);
                 }
 
@@ -69,17 +70,41 @@ class OrderController extends Controller
                 // Clear cart
                 $request->user()->cart()->detach();
 
-                // Create payment
-                $order->payments()->create([
-                    'amount' => $request->amount,
-                    'method' => $request->payment_method,
-                    'user_id' => $request->user()->id,
-                ]);
+                $payments = $this->paymentsFromRequest($request);
+                $order->load('items');
+                $orderTotal = $order->total();
+                $paymentTotal = round($payments->sum('amount'), 2);
+                $accountTotal = round($payments
+                    ->whereIn('method', Payment::ACCOUNT_METHODS)
+                    ->sum('amount'), 2);
+
+                if ($accountTotal > 0 && !$order->customer_id) {
+                    throw new \Exception('Select a customer before putting any amount on account.');
+                }
+
+                if ($paymentTotal <= 0) {
+                    throw new \Exception(__('order.validation.amount_required'));
+                }
+
+                if ($paymentTotal > $orderTotal + 0.00001) {
+                    throw new \Exception(__('order.amount_exceeds_balance'));
+                }
+
+                foreach ($payments as $payment) {
+                    $order->payments()->create([
+                        'amount' => $payment['amount'],
+                        'method' => $payment['method'],
+                        'user_id' => $request->user()->id,
+                    ]);
+                }
+
+                $order->load('payments');
 
                 AuditLog::record('order.created', $order, [
-                    'total' => $order->total(),
-                    'paid' => (float) $request->amount,
-                    'payment_method' => $request->payment_method,
+                    'total' => $orderTotal,
+                    'paid' => $order->receivedAmount(),
+                    'account' => $order->accountAmount(),
+                    'payment_methods' => $payments->pluck('method')->unique()->values()->all(),
                 ]);
 
                 return $order;
@@ -137,24 +162,50 @@ class OrderController extends Controller
     /**
      * Create an order item from cart item.
      */
-    private function createOrderItem(Order $order, $item): void
+    private function createOrderItem(Order $order, $item, float $discount): void
     {
+        $lineTotal = (float) $item->price * (float) $item->pivot->quantity;
+
         $order->items()->create([
-            'price' => $item->price * $item->pivot->quantity,
+            'price' => $lineTotal,
+            'discount' => min(max($discount, 0), $lineTotal),
             'quantity' => $item->pivot->quantity,
             'unit_cost' => $item->purchase_price ?? 0,
             'product_id' => $item->id,
         ]);
     }
 
+    private function paymentsFromRequest(OrderStoreRequest $request): \Illuminate\Support\Collection
+    {
+        $payments = collect($request->input('payments', []))
+            ->map(fn (array $payment): array => [
+                'method' => $payment['method'] ?? 'cash',
+                'amount' => round((float) ($payment['amount'] ?? 0), 2),
+            ])
+            ->filter(fn (array $payment): bool => $payment['amount'] > 0)
+            ->values();
+
+        if ($payments->isNotEmpty()) {
+            return $payments;
+        }
+
+        return collect([[
+            'method' => $request->input('payment_method', 'cash'),
+            'amount' => round((float) $request->input('amount', 0), 2),
+        ]]);
+    }
+
     private function createCustomOrderItem(Order $order, array $item): void
     {
         $quantity = (int) $item['quantity'];
         $unitPrice = (float) $item['price'];
+        $lineTotal = $unitPrice * $quantity;
+        $discount = min(max((float) ($item['discount'] ?? 0), 0), $lineTotal);
 
         $order->items()->create([
             'custom_item_name' => $item['name'],
-            'price' => $unitPrice * $quantity,
+            'price' => $lineTotal,
+            'discount' => $discount,
             'quantity' => $quantity,
             'unit_cost' => 0,
             'product_id' => null,
@@ -223,7 +274,7 @@ class OrderController extends Controller
                         throw new \Exception("Return quantity is higher than sold quantity for {$this->itemName($item)}.");
                     }
 
-                    $unitPrice = $item->unitPrice();
+                    $unitPrice = $item->netUnitPrice();
                     $lineTotal = $unitPrice * $requestedQuantity;
 
                     $return->items()->create([

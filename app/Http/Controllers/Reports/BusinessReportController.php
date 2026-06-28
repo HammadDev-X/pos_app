@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Http\Controllers\Controller;
+use App\Models\Customer;
 use App\Models\Expense;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -26,14 +27,15 @@ class BusinessReportController extends Controller
             ->get();
 
         $grossSales = $orders->sum(fn (Order $order): float => $order->grossTotal());
-        $salesReturns = $orders->sum(fn (Order $order): float => $order->returnedAmount());
+        $salesReturns = $orders->sum(fn (Order $order): float => $order->grossReturnedAmount());
         $discounts = $orders->sum(fn (Order $order): float => $order->discountAmount());
         $sales = $orders->sum(fn (Order $order): float => $order->total());
         $received = $orders->sum(fn (Order $order): float => $order->receivedAmount());
-        $due = max(0, $sales - $received);
-        $creditSales = $orders->sum(fn (Order $order): float => max($order->remainingBalance(), 0));
+        $openingCustomerBalances = (float) Customer::sum('pending_amount');
+        $due = $openingCustomerBalances + max(0, $sales - $received);
+        $creditSales = $openingCustomerBalances + $orders->sum(fn (Order $order): float => max($order->remainingBalance(), 0));
         $cost = $orders->sum(fn (Order $order): float => $order->costOfGoodsSold());
-        $expenses = (float) Expense::whereBetween('expense_date', [$dateFrom, $dateTo])->sum('amount');
+        $expenses = $this->expenseTotal($dateFrom, $dateTo);
         $grossProfit = $sales - $cost;
         $netProfit = $grossProfit - $expenses;
 
@@ -89,7 +91,7 @@ class BusinessReportController extends Controller
             ->selectRaw('
                 product_id,
                 SUM(quantity - COALESCE(returned_quantity, 0)) as total_quantity,
-                SUM(price - CASE WHEN quantity > 0 THEN (price / quantity) * COALESCE(returned_quantity, 0) ELSE 0 END) as total_sales
+                SUM((price - COALESCE(discount, 0)) * CASE WHEN quantity > 0 THEN (quantity - COALESCE(returned_quantity, 0)) / quantity ELSE 0 END) as total_sales
             ')
             ->with('product')
             ->whereNotNull('product_id')
@@ -104,7 +106,7 @@ class BusinessReportController extends Controller
             ->selectRaw('
                 custom_item_name,
                 SUM(quantity - COALESCE(returned_quantity, 0)) as total_quantity,
-                SUM(price - CASE WHEN quantity > 0 THEN (price / quantity) * COALESCE(returned_quantity, 0) ELSE 0 END) as total_sales
+                SUM((price - COALESCE(discount, 0)) * CASE WHEN quantity > 0 THEN (quantity - COALESCE(returned_quantity, 0)) / quantity ELSE 0 END) as total_sales
             ')
             ->whereNull('product_id')
             ->whereNotNull('custom_item_name')
@@ -239,10 +241,7 @@ class BusinessReportController extends Controller
         $sales = $orders->sum(fn (Order $order): float => $order->total());
         $received = $orders->sum(fn (Order $order): float => $order->receivedAmount());
         $cost = $orders->sum(fn (Order $order): float => $order->costOfGoodsSold());
-        $expenses = (float) Expense::whereBetween('expense_date', [
-            $dateFrom->toDateString(),
-            $dateTo->toDateString(),
-        ])->sum('amount');
+        $expenses = $this->expenseTotal($dateFrom->toDateString(), $dateTo->toDateString());
         $grossProfit = $sales - $cost;
 
         return [
@@ -263,10 +262,7 @@ class BusinessReportController extends Controller
     {
         $sales = $orders->sum(fn (Order $order): float => $order->total());
         $cost = $orders->sum(fn (Order $order): float => $order->costOfGoodsSold());
-        $expenses = (float) Expense::whereBetween('expense_date', [
-            $dateFrom->toDateString(),
-            $dateTo->toDateString(),
-        ])->sum('amount');
+        $expenses = $this->expenseTotal($dateFrom->toDateString(), $dateTo->toDateString());
         $grossProfit = $sales - $cost;
 
         return [
@@ -288,7 +284,7 @@ class BusinessReportController extends Controller
                     default => $item->product?->name ?? $item->custom_item_name ?? 'Open Item',
                 };
 
-                $sales = $item->unitPrice() * $item->netQuantity();
+                $sales = $item->netSales();
                 $cost = $item->netCost();
 
                 return [
@@ -307,6 +303,14 @@ class BusinessReportController extends Controller
             ])
             ->sortByDesc('gross_profit')
             ->values();
+    }
+
+    private function expenseTotal(string $dateFrom, string $dateTo): float
+    {
+        return (float) Expense::query()
+            ->whereDate('expense_date', '>=', $dateFrom)
+            ->whereDate('expense_date', '<=', $dateTo)
+            ->sum('amount');
     }
 
     private function inventoryReport(): array

@@ -33,7 +33,7 @@ describe('Cart Index', function () {
             ->assertJsonCount(1)
             ->assertJsonFragment([
                 'id' => $product->id,
-                'barcode' => $product->barcode
+                'sku' => $product->sku
             ]);
     });
 
@@ -57,14 +57,13 @@ describe('Cart Index', function () {
 });
 
 describe('Cart Store', function () {
-    test('authenticated users can add product to cart by barcode', function () {
+    test('authenticated users can add product to cart by product id', function () {
         $product = Product::factory()->create([
-            'barcode' => '1234567890',
             'quantity' => 10,
         ]);
 
         $this->postJson(route('cart.store'), [
-            'barcode' => '1234567890',
+            'product_id' => $product->id,
         ]);
 
         expect($this->user->cart()->count())->toBe(1)
@@ -74,13 +73,12 @@ describe('Cart Store', function () {
 
     test('adding same product increases quantity', function () {
         $product = Product::factory()->create([
-            'barcode' => '1234567890',
             'quantity' => 10,
         ]);
 
-        $this->postJson(route('cart.store'), ['barcode' => '1234567890']);
-        $this->postJson(route('cart.store'), ['barcode' => '1234567890']);
-        $this->postJson(route('cart.store'), ['barcode' => '1234567890']);
+        $this->postJson(route('cart.store'), ['product_id' => $product->id]);
+        $this->postJson(route('cart.store'), ['product_id' => $product->id]);
+        $this->postJson(route('cart.store'), ['product_id' => $product->id]);
 
         expect($this->user->cart()->count())->toBe(1)
             ->and($this->user->cart()->first()->pivot->quantity)->toBe(3);
@@ -88,12 +86,11 @@ describe('Cart Store', function () {
 
     test('cannot add product with insufficient stock', function () {
         $product = Product::factory()->create([
-            'barcode' => '1234567890',
             'quantity' => 0,
         ]);
 
         $response = $this->post(route('cart.store'), [
-            'barcode' => '1234567890',
+            'product_id' => $product->id,
         ]);
 
         $response->assertStatus(400)
@@ -107,14 +104,13 @@ describe('Cart Store', function () {
 
     test('cannot add more than available quantity', function () {
         $product = Product::factory()->create([
-            'barcode' => '1234567890',
             'quantity' => 2,
         ]);
 
-        $this->postJson(route('cart.store'), ['barcode' => '1234567890']);
-        $this->postJson(route('cart.store'), ['barcode' => '1234567890']);
+        $this->postJson(route('cart.store'), ['product_id' => $product->id]);
+        $this->postJson(route('cart.store'), ['product_id' => $product->id]);
 
-        $response = $this->postJson(route('cart.store'), ['barcode' => '1234567890']);
+        $response = $this->postJson(route('cart.store'), ['product_id' => $product->id]);
 
         $response->assertStatus(400)
             ->assertJson([
@@ -127,31 +123,31 @@ describe('Cart Store', function () {
             ->toBe(2);
     });
 
-    test('barcode is required', function () {
+    test('product id or search is required', function () {
         $response = $this->postJson(route('cart.store'), [
-            'barcode' => '',
+            'search' => '',
         ]);
 
         $response->assertStatus(422)
-            ->assertJsonValidationErrors('barcode');
+            ->assertJsonValidationErrors('product_id');
     });
 
-    test('barcode must exist in products', function () {
+    test('search must match a product', function () {
         $response = $this->postJson(route('cart.store'), [
-            'barcode' => 'non-existent-barcode',
+            'search' => 'non-existent-product',
         ]);
         $response->assertStatus(422)
-            ->assertJsonValidationErrors('barcode');
+            ->assertJsonValidationErrors('search');
     });
 
     test('different users have separate carts', function () {
-        $product = Product::factory()->create(['barcode' => '1234567890', 'quantity' => 10]);
+        $product = Product::factory()->create(['quantity' => 10]);
 
         $user1 = User::factory()->create();
         $user2 = User::factory()->create();
 
-        $this->actingAs($user1)->postJson(route('cart.store'), ['barcode' => '1234567890']);
-        $this->actingAs($user2)->postJson(route('cart.store'), ['barcode' => '1234567890']);
+        $this->actingAs($user1)->postJson(route('cart.store'), ['product_id' => $product->id]);
+        $this->actingAs($user2)->postJson(route('cart.store'), ['product_id' => $product->id]);
 
         expect($user1->cart()->count())->toBe(1)
             ->and($user2->cart()->count())->toBe(1)

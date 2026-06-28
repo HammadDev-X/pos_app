@@ -25,7 +25,7 @@ class PartialPaymentRequest extends FormRequest
         return [
             'order_id' => ['required', 'integer', 'exists:orders,id'],
             'amount' => ['required', 'numeric', 'min:0.01', 'decimal:0,2'],
-            'payment_method' => ['required', 'string', 'in:cash,card,bank_transfer,mobile_money,jazzcash,easypaisa,account'],
+            'payment_method' => ['required', 'string', 'in:cash,card,bank_transfer,mobile_money,jazzcash,easypaisa'],
         ];
     }
 

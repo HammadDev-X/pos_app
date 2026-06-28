@@ -3,18 +3,21 @@
 @section('title', __('product.Product_List'))
 @section('content-header', __('product.Product_List'))
 @section('content-actions')
-<a href="{{route('products.create')}}" class="btn btn-primary">{{ __('product.Create_Product') }}</a>
+@if(auth()->user()?->isManager())
+    <a href="{{route('products.create')}}" class="btn btn-primary">{{ __('product.Create_Product') }}</a>
+@endif
 @endsection
 @section('css')
 <link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
 @endsection
 @section('content')
-<div class="card product-list">
+<div class="card product-list product-list-card">
     <div class="card-body">
+        @php($canManageProducts = auth()->user()?->isManager())
         <form method="GET" action="{{ route('products.index') }}" class="mb-3">
             <div class="row">
                 <div class="col-md-5">
-                    <input type="text" name="search" value="{{ request('search') }}" class="form-control" placeholder="{{ __('Search by name, SKU, barcode, or category') }}">
+                    <input type="text" name="search" value="{{ request('search') }}" class="form-control" placeholder="{{ __('Search by name, SKU, short code, or category') }}">
                 </div>
                 <div class="col-md-4">
                     <select name="category_id" class="form-control">
@@ -30,7 +33,8 @@
                 </div>
             </div>
         </form>
-        <table class="table">
+        <div class="table-responsive product-list-table">
+        <table class="table mb-0">
             <thead>
                 <tr>
                     <th>{{ __('product.ID') }}</th>
@@ -38,15 +42,18 @@
                     <th>{{ __('Category') }}</th>
                     <th>{{ __('product.Image') }}</th>
                     <th>SKU / Product Code</th>
-                    <th>{{ __('product.Barcode') }}</th>
                     <th>Unit Type</th>
-                    <th>Purchase Cost</th>
+                    @if($canManageProducts)
+                        <th>Purchase Cost</th>
+                    @endif
                     <th>Sale Price</th>
                     <th>Wholesale Price</th>
                     <th>Minimum Stock</th>
                     <th>Current Stock</th>
                     <th>{{ __('product.Status') }}</th>
-                    <th>{{ __('product.Actions') }}</th>
+                    @if($canManageProducts)
+                        <th>{{ __('product.Actions') }}</th>
+                    @endif
                 </tr>
             </thead>
             <tbody>
@@ -57,9 +64,10 @@
                     <td>{{ $product->category?->name ?? __('Uncategorized') }}</td>
                     <td><img class="product-img" src="{{ $product->image_url }}" alt="{{ $product->name }}"></td>
                     <td>{{ $product->sku }}</td>
-                    <td>{{ $product->barcode ?: '-' }}</td>
                     <td>{{ ['pack' => 'Pack', 'kg' => 'Kg', 'piece' => 'Piece', 'pcs' => 'Piece', 'carton' => 'Carton'][$product->unit] ?? ucfirst((string) $product->unit) }}</td>
-                    <td>{{ config('settings.currency_symbol') }}{{ number_format((float) $product->purchase_price, 2) }}</td>
+                    @if($canManageProducts)
+                        <td>{{ config('settings.currency_symbol') }}{{ number_format((float) $product->purchase_price, 2) }}</td>
+                    @endif
                     <td>{{ config('settings.currency_symbol') }}{{ number_format((float) $product->price, 2) }}</td>
                     <td>{{ $product->wholesale_price !== null ? config('settings.currency_symbol') . number_format((float) $product->wholesale_price, 2) : '-' }}</td>
                     <td>{{ number_format((float) $product->minimum_stock_level, 2) }}</td>
@@ -71,14 +79,17 @@
                     <td>
                         <span class="right badge badge-{{ $product->status ? 'success' : 'danger' }}">{{$product->status ? __('common.Active') : __('common.Inactive') }}</span>
                     </td>
-                    <td>
-                        <a href="{{ route('products.edit', $product) }}" class="btn btn-primary"><i class="fas fa-edit"></i></a>
-                        <button class="btn btn-danger btn-delete" data-url="{{route('products.destroy', $product)}}"><i class="fas fa-trash"></i></button>
-                    </td>
+                    @if($canManageProducts)
+                        <td>
+                            <a href="{{ route('products.edit', $product) }}" class="btn btn-primary"><i class="fas fa-edit"></i></a>
+                            <button class="btn btn-danger btn-delete" data-url="{{route('products.destroy', $product)}}"><i class="fas fa-trash"></i></button>
+                        </td>
+                    @endif
                 </tr>
                 @endforeach
             </tbody>
         </table>
+        </div>
         {{ $products->render() }}
     </div>
 </div>

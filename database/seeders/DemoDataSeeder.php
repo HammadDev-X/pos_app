@@ -32,20 +32,21 @@ class DemoDataSeeder extends Seeder
             ));
 
             $products = collect([
-                ['name' => 'Arabica Coffee Beans', 'barcode' => '100000000001', 'price' => 18.50, 'purchase_price' => 11.25, 'quantity' => 80, 'category' => 'Grocery'],
-                ['name' => 'Green Tea Box', 'barcode' => '100000000002', 'price' => 7.99, 'purchase_price' => 4.10, 'quantity' => 65, 'category' => 'Drinks'],
-                ['name' => 'Chocolate Cookies', 'barcode' => '100000000003', 'price' => 4.50, 'purchase_price' => 2.20, 'quantity' => 120, 'category' => 'Bakery'],
-                ['name' => 'Organic Honey Jar', 'barcode' => '100000000004', 'price' => 12.00, 'purchase_price' => 7.50, 'quantity' => 34, 'category' => 'Grocery'],
-                ['name' => 'Olive Oil Bottle', 'barcode' => '100000000005', 'price' => 16.75, 'purchase_price' => 10.00, 'quantity' => 42, 'category' => 'Grocery'],
-                ['name' => 'Pasta Pack', 'barcode' => '100000000006', 'price' => 3.25, 'purchase_price' => 1.65, 'quantity' => 95, 'category' => 'Grocery'],
-                ['name' => 'Tomato Sauce', 'barcode' => '100000000007', 'price' => 5.40, 'purchase_price' => 2.85, 'quantity' => 52, 'category' => 'Grocery'],
-                ['name' => 'Almond Milk', 'barcode' => '100000000008', 'price' => 4.80, 'purchase_price' => 2.95, 'quantity' => 28, 'category' => 'Drinks'],
-                ['name' => 'Granola Cereal', 'barcode' => '100000000009', 'price' => 8.25, 'purchase_price' => 4.75, 'quantity' => 9, 'category' => 'Grocery'],
-                ['name' => 'Sparkling Water', 'barcode' => '100000000010', 'price' => 1.99, 'purchase_price' => 0.90, 'quantity' => 150, 'category' => 'Drinks'],
+                ['name' => 'Arabica Coffee Beans', 'sku' => 'SKU-000001', 'price' => 18.50, 'purchase_price' => 11.25, 'quantity' => 80, 'category' => 'Grocery'],
+                ['name' => 'Green Tea Box', 'sku' => 'SKU-000002', 'price' => 7.99, 'purchase_price' => 4.10, 'quantity' => 65, 'category' => 'Drinks'],
+                ['name' => 'Chocolate Cookies', 'sku' => 'SKU-000003', 'price' => 4.50, 'purchase_price' => 2.20, 'quantity' => 120, 'category' => 'Bakery'],
+                ['name' => 'Organic Honey Jar', 'sku' => 'SKU-000004', 'price' => 12.00, 'purchase_price' => 7.50, 'quantity' => 34, 'category' => 'Grocery'],
+                ['name' => 'Olive Oil Bottle', 'sku' => 'SKU-000005', 'price' => 16.75, 'purchase_price' => 10.00, 'quantity' => 42, 'category' => 'Grocery'],
+                ['name' => 'Pasta Pack', 'sku' => 'SKU-000006', 'price' => 3.25, 'purchase_price' => 1.65, 'quantity' => 95, 'category' => 'Grocery'],
+                ['name' => 'Tomato Sauce', 'sku' => 'SKU-000007', 'price' => 5.40, 'purchase_price' => 2.85, 'quantity' => 52, 'category' => 'Grocery'],
+                ['name' => 'Almond Milk', 'sku' => 'SKU-000008', 'price' => 4.80, 'purchase_price' => 2.95, 'quantity' => 28, 'category' => 'Drinks'],
+                ['name' => 'Granola Cereal', 'sku' => 'SKU-000009', 'price' => 8.25, 'purchase_price' => 4.75, 'quantity' => 9, 'category' => 'Grocery'],
+                ['name' => 'Sparkling Water', 'sku' => 'SKU-000010', 'price' => 1.99, 'purchase_price' => 0.90, 'quantity' => 150, 'category' => 'Drinks'],
             ])->map(fn (array $product): Product => Product::updateOrCreate(
-                ['barcode' => $product['barcode']],
+                ['sku' => $product['sku']],
                 [
                     'name' => $product['name'],
+                    'sku' => $product['sku'],
                     'category_id' => $categories->firstWhere('name', $product['category'])?->id,
                     'description' => 'Demo inventory item',
                     'image' => null,

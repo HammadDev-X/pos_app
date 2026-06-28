@@ -18,7 +18,7 @@ class CustomerUpdateRequest extends FormRequest
             'first_name' => ['required', 'string', 'max:20'],
             'last_name' => ['required', 'string', 'max:20'],
             'customer_code' => [
-                'nullable',
+                'required',
                 'string',
                 'max:30',
                 Rule::unique('customers', 'customer_code')->ignore($this->route('customer')),
@@ -26,6 +26,7 @@ class CustomerUpdateRequest extends FormRequest
             'email' => ['nullable', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:20'],
             'address' => ['nullable', 'string', 'max:500'],
+            'pending_amount' => ['nullable', 'numeric', 'min:0', 'decimal:0,2'],
             'avatar' => ['nullable', 'image', 'max:2048'],
         ];
     }
@@ -37,6 +38,8 @@ class CustomerUpdateRequest extends FormRequest
             'first_name.max' => __('customer.validation.first_name_max'),
             'last_name.required' => __('customer.validation.last_name_required'),
             'last_name.max' => __('customer.validation.last_name_max'),
+            'customer_code.required' => __('Customer code is required.'),
+            'customer_code.unique' => __('This customer code is already in use.'),
             'email.email' => __('customer.validation.email_invalid'),
             'phone.max' => __('customer.validation.phone_max'),
             'avatar.image' => __('customer.validation.avatar_image'),

@@ -27,20 +27,18 @@ class CartController extends Controller
     }
 
     /**
-     * Add product to cart by barcode.
+     * Add product to cart.
      */
     public function store(AddToCartRequest $request): JsonResponse
     {
-        // Find product by id or by barcode/sku/short_code/name
         $product = null;
         if ($request->filled('product_id')) {
             $product = Product::find($request->product_id);
-        } elseif ($request->filled('barcode')) {
-            $term = $request->barcode;
+        } elseif ($request->filled('search')) {
+            $term = $request->search;
             $product = Product::query()
                 ->where(function ($query) use ($term): void {
-                    $query->where('barcode', $term)
-                        ->orWhere('sku', $term)
+                    $query->where('sku', $term)
                         ->orWhere('short_code', $term)
                         ->orWhere('id', $term)
                         ->orWhere('name', 'LIKE', "%{$term}%");

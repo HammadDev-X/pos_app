@@ -30,6 +30,8 @@ use Illuminate\Support\Carbon;
  */
 class Payment extends Model
 {
+    public const ACCOUNT_METHODS = ['account', 'credit'];
+
     protected $fillable = [
         'amount',
         'method',
@@ -54,5 +56,10 @@ class Payment extends Model
     public function formattedAmount(): string
     {
         return number_format((float) $this->amount, 2);
+    }
+
+    public function isAccountTender(): bool
+    {
+        return in_array($this->method, self::ACCOUNT_METHODS, true);
     }
 }

@@ -170,7 +170,7 @@
                                         <td>
                                             @if($item->product)
                                                 <strong>{{ $item->product->name }}</strong><br>
-                                                <small class="text-muted">{{ $item->product->barcode }}</small>
+                                                <small class="text-muted">{{ $item->product->sku }}</small>
                                             @else
                                                 <span class="text-muted">{{ __('Product not found') }}</span>
                                             @endif

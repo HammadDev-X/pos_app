@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Models\Category;
+use App\Models\Expense;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\PurchaseItem;
@@ -182,18 +184,97 @@ test('business reports expose daily weekly monthly and inventory report sections
         ->assertViewHas('expiringSoonItems', fn ($items) => $items->pluck('product.name')->contains('Available Fish'));
 });
 
-test('roles allow admin management while blocking cashier from sensitive sections', function () {
-    $cashier = User::factory()->cashier()->create();
+test('business and product analytics use the same net sales and gross profit formula', function () {
+    $product = Product::factory()->create([
+        'name' => 'Profit Check Pack',
+        'price' => 400,
+        'purchase_price' => 300,
+        'quantity' => 10,
+        'track_stock' => true,
+    ]);
+    $order = Order::factory()->create([
+        'user_id' => $this->user->id,
+        'created_at' => now(),
+    ]);
+    $order->items()->create([
+        'product_id' => $product->id,
+        'price' => 800,
+        'discount' => 50,
+        'quantity' => 2,
+        'unit_cost' => 300,
+    ]);
+    $order->payments()->create([
+        'amount' => 750,
+        'method' => 'cash',
+        'user_id' => $this->user->id,
+    ]);
+    Expense::create([
+        'user_id' => $this->user->id,
+        'expense_date' => now()->toDateString(),
+        'category' => 'Rent',
+        'amount' => 100,
+        'description' => 'Daily shop expense',
+    ]);
 
-    $this->actingAs($cashier)
+    $business = $this->get(route('reports.business', [
+        'date_from' => now()->toDateString(),
+        'date_to' => now()->toDateString(),
+    ]));
+    $analytics = $this->get(route('reports.product-analytics', [
+        'date_from' => now()->toDateString(),
+        'date_to' => now()->toDateString(),
+    ]));
+
+    $business->assertViewHas('grossSales', 800.0)
+        ->assertViewHas('discounts', 50.0)
+        ->assertViewHas('sales', 750.0)
+        ->assertViewHas('cost', 600.0)
+        ->assertViewHas('grossProfit', 150.0)
+        ->assertViewHas('netProfit', 50.0);
+
+    $analytics->assertViewHas('summary', fn (array $summary): bool =>
+        (float) $summary['total_revenue'] === 750.0
+        && (float) $summary['total_cost'] === 600.0
+        && (float) $summary['total_profit'] === 150.0
+    );
+});
+
+test('roles allow manager management while salesman can only access working sections', function () {
+    $salesman = User::factory()->salesman()->create();
+    $manager = User::factory()->manager()->create();
+
+    $this->actingAs($salesman)
         ->get(route('settings.index'))
         ->assertForbidden();
 
-    $this->actingAs($cashier)
+    $this->actingAs($salesman)
+        ->get(route('purchases.index'))
+        ->assertForbidden();
+
+    $this->actingAs($salesman)
+        ->get(route('reports.business'))
+        ->assertForbidden();
+
+    $this->actingAs($salesman)
         ->get(route('cart.index'))
         ->assertOk();
 
-    $this->actingAs($this->user)
+    $this->actingAs($salesman)
+        ->get(route('customers.index'))
+        ->assertOk();
+
+    $this->actingAs($salesman)
+        ->get(route('stock-adjustments.create'))
+        ->assertOk()
+        ->assertSee('Stock out')
+        ->assertSee('Customer return')
+        ->assertDontSee('Stock in');
+
+    $this->actingAs($salesman)
+        ->get(route('expenses.index'))
+        ->assertOk();
+
+    $this->actingAs($manager)
         ->get(route('settings.index'))
         ->assertOk();
 });

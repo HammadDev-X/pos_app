@@ -14,11 +14,13 @@ beforeEach(function () {
     Storage::fake('public');
 
     $this->validCustomerData = [
+        'customer_code' => 'MANUAL-001',
         'first_name' => 'John',
         'last_name' => 'Doe',
         'email' => 'john@example.com',
         'phone' => '+1234567890',
         'address' => '123 Main St, City',
+        'pending_amount' => '0',
     ];
 });
 
@@ -96,10 +98,12 @@ describe('Customer Store', function () {
             ->assertStatus(302);
 
         $this->assertDatabaseHas('customers', [
+            'customer_code' => 'MANUAL-001',
             'first_name' => 'John',
             'last_name' => 'Doe',
             'email' => 'john@example.com',
             'phone' => '+1234567890',
+            'pending_amount' => '0.00',
             'user_id' => $this->user->id,
         ]);
     });
@@ -112,22 +116,28 @@ describe('Customer Store', function () {
             ->toBe($this->user->id);
     });
 
-    test('customer gets a unique customer code automatically', function () {
+    test('customer stores the manually entered customer code', function () {
         $this->post(route('customers.store'), $this->validCustomerData)
             ->assertRedirect(route('customers.index'));
 
         $customer = Customer::firstWhere('email', 'john@example.com');
 
         expect($customer->customer_code)
-            ->toBe(Customer::codeForId($customer->id));
+            ->toBe('MANUAL-001');
+    });
+
+    test('customer code is required', function () {
+        $this->post(route('customers.store'), array_merge($this->validCustomerData, [
+            'customer_code' => '',
+        ]))->assertSessionHasErrors('customer_code');
     });
 
     test('customer code must be unique when provided', function () {
         Customer::factory()->create(['customer_code' => 'CUST-SPECIAL']);
 
-        $this->post(route('customers.store'), $this->validCustomerData + [
+        $this->post(route('customers.store'), array_merge($this->validCustomerData, [
             'customer_code' => 'CUST-SPECIAL',
-        ])->assertSessionHasErrors('customer_code');
+        ]))->assertSessionHasErrors('customer_code');
     });
 
     test('customer can be created with avatar', function () {
@@ -150,6 +160,7 @@ describe('Customer Store', function () {
 
     test('customer can be created with only required fields', function () {
         $data = [
+            'customer_code' => 'MIN-001',
             'first_name' => 'Jane',
             'last_name' => 'Smith',
         ];
@@ -159,11 +170,24 @@ describe('Customer Store', function () {
         $response->assertRedirect(route('customers.index'));
 
         $this->assertDatabaseHas('customers', [
+            'customer_code' => 'MIN-001',
             'first_name' => 'Jane',
             'last_name' => 'Smith',
             'email' => null,
             'phone' => null,
             'address' => null,
+        ]);
+    });
+
+    test('customer can be created with pending amount', function () {
+        $this->post(route('customers.store'), array_merge($this->validCustomerData, [
+            'email' => 'pending@example.com',
+            'pending_amount' => '1250.50',
+        ]))->assertRedirect(route('customers.index'));
+
+        $this->assertDatabaseHas('customers', [
+            'email' => 'pending@example.com',
+            'pending_amount' => '1250.50',
         ]);
     });
 });
@@ -194,11 +218,13 @@ describe('Customer Update', function () {
         $customer = Customer::factory()->create();
 
         $updateData = [
+            'customer_code' => 'UPDATED-001',
             'first_name' => 'Updated',
             'last_name' => 'Name',
             'email' => 'updated@example.com',
             'phone' => '+9876543210',
             'address' => 'New Address',
+            'pending_amount' => '300.25',
         ];
 
         $response = $this->put(route('customers.update', $customer), $updateData);
@@ -208,9 +234,11 @@ describe('Customer Update', function () {
 
         $this->assertDatabaseHas('customers', [
             'id' => $customer->id,
+            'customer_code' => 'UPDATED-001',
             'first_name' => 'Updated',
             'last_name' => 'Name',
             'email' => 'updated@example.com',
+            'pending_amount' => '300.25',
         ]);
     });
 
@@ -249,6 +277,7 @@ describe('Customer Update', function () {
         ]);
 
         $updateCustomerData = [
+            'customer_code' => $customer->customer_code,
             'first_name' => 'Modified',
             'last_name' => $customer->last_name,
         ];

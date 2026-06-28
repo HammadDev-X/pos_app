@@ -21,12 +21,13 @@ class CustomerFactory extends Factory
     public function definition(): array
     {
         return [
-            'customer_code' => null,
+            'customer_code' => 'CUST-' . $this->faker->unique()->bothify('####??'),
             'first_name' => $this->faker->firstName(),
             'last_name' => $this->faker->lastName(),
             'email' => $this->faker->unique()->safeEmail(),
             'phone' => $this->faker->optional()->phoneNumber(),
             'address' => $this->faker->optional()->address(),
+            'pending_amount' => 0,
             'avatar' => $this->faker->optional()->imageUrl(200, 200, 'people', true),
             'user_id' => User::factory()
         ];

@@ -27,7 +27,6 @@ return [
     //==========================================
     // Mensajes generales
     //==========================================
-    'scan_barcode'      => 'Escanear código de barras...',
     'received_amount'   => 'Monto recibido',
     'confirm_pay'       => 'Recibir',
     'cancel_pay'        => 'Cancelar',

@@ -16,33 +16,32 @@ class AddToCartRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'barcode' => ['nullable', 'string'],
+            'search' => ['nullable', 'string'],
             'product_id' => ['nullable', 'integer', 'exists:products,id'],
         ];
     }
 
     protected function prepareForValidation(): void
     {
-        if ($this->has('barcode')) {
-            $barcode = trim((string) $this->input('barcode'));
-            $this->merge(['barcode' => $barcode === '' ? null : $barcode]);
+        if ($this->has('search')) {
+            $search = trim((string) $this->input('search'));
+            $this->merge(['search' => $search === '' ? null : $search]);
         }
     }
 
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
-            if (!$this->filled('barcode') && !$this->filled('product_id')) {
-                $validator->errors()->add('barcode', __('cart.validation.product_not_found'));
+            if (!$this->filled('search') && !$this->filled('product_id')) {
+                $validator->errors()->add('product_id', __('cart.validation.product_not_found'));
                 return;
             }
 
-            if ($this->filled('barcode')) {
-                $term = $this->input('barcode');
+            if ($this->filled('search')) {
+                $term = $this->input('search');
                 $exists = Product::query()
                     ->where(function ($query) use ($term): void {
-                        $query->where('barcode', $term)
-                            ->orWhere('sku', $term)
+                        $query->where('sku', $term)
                             ->orWhere('short_code', $term)
                             ->orWhere('id', $term)
                             ->orWhere('name', 'LIKE', "%{$term}%");
@@ -50,7 +49,7 @@ class AddToCartRequest extends FormRequest
                     ->exists();
 
                 if (!$exists) {
-                    $validator->errors()->add('barcode', __('cart.validation.product_not_found'));
+                    $validator->errors()->add('search', __('cart.validation.product_not_found'));
                 }
             }
         });

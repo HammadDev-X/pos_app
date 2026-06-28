@@ -23,7 +23,6 @@
                 <hr>
                 <p class="mb-1"><strong>Gross:</strong> {{ $currency }} {{ number_format($order->grossTotal(), 2) }}</p>
                 <p class="mb-1"><strong>Already Returned:</strong> {{ $currency }} {{ number_format($order->returnedAmount(), 2) }}</p>
-                <p class="mb-1"><strong>Discount:</strong> {{ $currency }} {{ number_format($order->discountAmount(), 2) }}</p>
                 <p class="mb-1"><strong>Net Total:</strong> {{ $currency }} {{ number_format($order->total(), 2) }}</p>
                 <p class="mb-0"><strong>Balance:</strong> {{ $currency }} {{ number_format(max($order->remainingBalance(), 0), 2) }}</p>
                 <hr>

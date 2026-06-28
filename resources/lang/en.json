@@ -45,7 +45,6 @@
     "product.ID": "ID",
     "product.Name": "Name",
     "product.Image": "Image",
-    "product.Barcode": "Barcode",
     "product.Price": "Price",
     "product.Quantity": "Quantity",
     "product.Status": "Status",

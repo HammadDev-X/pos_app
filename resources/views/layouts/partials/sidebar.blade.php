@@ -1,4 +1,8 @@
 <!-- Main Sidebar Container -->
+@php
+    $user = auth()->user();
+    $canManage = $user?->isManager();
+@endphp
 <aside class="main-sidebar sidebar-dark-primary elevation-4 pos-sidebar">
     <!-- Brand Logo -->
     <a href="{{route('home')}}" class="brand-link">
@@ -27,12 +31,14 @@
                         <p>{{ __('product.title') }}</p>
                     </a>
                 </li>
+                @if($canManage)
                 <li class="nav-item">
                     <a href="{{ route('categories.index') }}" class="nav-link {{ activeSegment('categories') }}">
                         <i class="nav-icon fas fa-tags"></i>
                         <p>{{ __('Categories') }}</p>
                     </a>
                 </li>
+                @endif
                 <li class="nav-item">
                     <a href="{{ route('stock-adjustments.index') }}" class="nav-link {{ activeSegment('stock-adjustments') }}">
                         <i class="nav-icon fas fa-sliders-h"></i>
@@ -65,6 +71,7 @@
                     </a>
                 </li>
 
+                @if($canManage)
                 <li class="nav-header">{{ __('Purchases') }}</li>
                 <!-- Purchases (Dropdown) -->
                 <li class="nav-item {{ request()->routeIs('purchases.*') ? 'menu-open' : '' }}">
@@ -97,6 +104,7 @@
                         <p>{{ __('Supplier') }}</p>
                     </a>
                 </li>
+                @endif
 
                 <li class="nav-header">{{ __('Extra') }}</li>
                 <li class="nav-item">
@@ -105,6 +113,7 @@
                         <p>{{ __('Expenses') }}</p>
                     </a>
                 </li>
+                @if($canManage)
                 <li class="nav-item">
                     <a href="{{ route('reports.business') }}" class="nav-link {{ request()->routeIs('reports.business') ? 'active' : '' }}">
                         <i class="nav-icon fas fa-chart-line"></i>
@@ -136,6 +145,7 @@
                         <p>{{ __('settings.title') }}</p>
                     </a>
                 </li>
+                @endif
 
                 <!-- Logout -->
                 <li class="nav-item">

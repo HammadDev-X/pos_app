@@ -24,7 +24,6 @@ class ProductFactory extends Factory
             'description' => $this->faker->optional()->paragraph(),
             'image' => $this->faker->optional()->imageUrl(640, 480, 'products', true),
             'sku' => $this->faker->unique()->bothify('SKU-######'),
-            'barcode' => $this->faker->unique()->ean13(),
             'short_code' => $this->faker->boolean(30) ? $this->faker->unique()->bothify('P###') : null,
             'price' => $this->faker->randomFloat(2, 10, 999),
             'status' => $this->faker->boolean(),

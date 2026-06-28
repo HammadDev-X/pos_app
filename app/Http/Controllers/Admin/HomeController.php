@@ -21,13 +21,14 @@ class HomeController extends Controller
     {
         $orders = Order::with(['items.product', 'payments'])->get();
         $todayOrders = $orders->where('created_at', '>=', today());
-        $todaySales = $todayOrders->sum(fn($order): float => min($order->receivedAmount(), $order->total()));
+        $todaySales = $todayOrders->sum(fn(Order $order): float => $order->total());
         $todayCost = $todayOrders->sum(fn (Order $order): float => $order->costOfGoodsSold());
         $todayExpenses = (float) Expense::whereDate('expense_date', today())->sum('amount');
         $monthOrders = $orders->where('created_at', '>=', now()->startOfMonth());
         $monthSales = $monthOrders->sum(fn (Order $order): float => $order->total());
         $cashSales = $orders->sum(fn (Order $order): float => (float) $order->payments->where('method', 'cash')->sum('amount'));
-        $creditSales = $orders->sum(fn (Order $order): float => max($order->remainingBalance(), 0));
+        $openingCustomerBalances = (float) Customer::sum('pending_amount');
+        $creditSales = $openingCustomerBalances + $orders->sum(fn (Order $order): float => max($order->remainingBalance(), 0));
         $recoveryPayments = $orders
             ->flatMap->payments
             ->filter(fn ($payment): bool => $payment->order && $payment->created_at->gt($payment->order->created_at))
@@ -52,8 +53,8 @@ class HomeController extends Controller
             'net_profit_today' => $todaySales - $todayCost - $todayExpenses,
             'customers_count' => Customer::count(),
             'active_customers_count' => Customer::has('orders')->count(),
-            'customers_with_balance_count' => Customer::whereHas('orders')->get()
-                ->filter(fn (Customer $customer): bool => $customer->orders->sum(fn (Order $order): float => max($order->remainingBalance(), 0)) > 0)
+            'customers_with_balance_count' => Customer::with('orders')->get()
+                ->filter(fn (Customer $customer): bool => (float) $customer->pending_amount + $customer->orders->sum(fn (Order $order): float => max($order->remainingBalance(), 0)) > 0)
                 ->count(),
             'total_receivable' => $creditSales,
             'total_expenses' => $expenseTotals['total'],

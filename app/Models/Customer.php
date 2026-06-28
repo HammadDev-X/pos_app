@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Storage;
  * @property string|null $email
  * @property string|null $phone
  * @property string|null $address
+ * @property string|float $pending_amount
  * @property string|null $avatar
  * @property int $user_id
  * @property Carbon|null $created_at
@@ -51,27 +52,14 @@ class Customer extends Model
         'email',
         'phone',
         'address',
+        'pending_amount',
         'avatar',
         'user_id',
     ];
 
-    protected static function booted(): void
-    {
-        static::created(function (Customer $customer): void {
-            if (filled($customer->customer_code)) {
-                return;
-            }
-
-            $customer->forceFill([
-                'customer_code' => static::codeForId($customer->id),
-            ])->saveQuietly();
-        });
-    }
-
-    public static function codeForId(int $id): string
-    {
-        return 'CUST-' . str_pad((string) $id, 6, '0', STR_PAD_LEFT);
-    }
+    protected $casts = [
+        'pending_amount' => 'decimal:2',
+    ];
 
     public function getAvatarUrl(): string
     {

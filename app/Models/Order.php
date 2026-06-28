@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
+use App\Models\Payment;
 
 /**
  * @property int $id
@@ -121,14 +122,31 @@ class Order extends Model
             ->sum(fn (OrderItem $item): float => $item->returnedAmount());
     }
 
+    public function grossReturnedAmount(): float
+    {
+        if ($this->relationLoaded('items')) {
+            return (float) $this->items->sum(fn (OrderItem $item): float => $item->grossReturnedAmount());
+        }
+
+        return (float) $this->items()
+            ->get()
+            ->sum(fn (OrderItem $item): float => $item->grossReturnedAmount());
+    }
+
     public function discountAmount(): float
     {
-        return min((float) ($this->discount ?? 0), max($this->grossTotal() - $this->returnedAmount(), 0));
+        return $this->relationLoaded('items')
+            ? (float) $this->items->sum(fn (OrderItem $item): float => $item->discountAmount() - $item->returnedDiscountAmount())
+            : (float) $this->items()->get()->sum(fn (OrderItem $item): float => $item->discountAmount() - $item->returnedDiscountAmount());
     }
 
     public function total(): float
     {
-        return max($this->grossTotal() - $this->returnedAmount() - $this->discountAmount(), 0);
+        if ($this->relationLoaded('items')) {
+            return max((float) $this->items->sum(fn (OrderItem $item): float => $item->netSales()), 0);
+        }
+
+        return max((float) $this->items()->get()->sum(fn (OrderItem $item): float => $item->netSales()), 0);
     }
 
     public function costOfGoodsSold(): float
@@ -154,9 +172,38 @@ class Order extends Model
     public function receivedAmount(): float
     {
         if ($this->relationLoaded('payments')) {
-            return (float) $this->payments->sum(fn($payment): float => (float) $payment->amount);
+            return round((float) $this->payments
+                ->reject(fn (Payment $payment): bool => $payment->isAccountTender())
+                ->sum(fn (Payment $payment): float => (float) $payment->amount), 2);
         }
-        return (float) $this->payments()->sum('amount');
+
+        return round((float) $this->payments()
+            ->where(fn (Builder $query) => $query
+                ->whereNotIn('method', Payment::ACCOUNT_METHODS)
+                ->orWhereNull('method'))
+            ->sum('amount'), 2);
+    }
+
+    public function accountAmount(): float
+    {
+        if ($this->relationLoaded('payments')) {
+            return round((float) $this->payments
+                ->filter(fn (Payment $payment): bool => $payment->isAccountTender())
+                ->sum(fn (Payment $payment): float => (float) $payment->amount), 2);
+        }
+
+        return round((float) $this->payments()
+            ->whereIn('method', Payment::ACCOUNT_METHODS)
+            ->sum('amount'), 2);
+    }
+
+    public function paymentTotal(): float
+    {
+        if ($this->relationLoaded('payments')) {
+            return round((float) $this->payments->sum(fn (Payment $payment): float => (float) $payment->amount), 2);
+        }
+
+        return round((float) $this->payments()->sum('amount'), 2);
     }
 
     /**
@@ -172,7 +219,7 @@ class Order extends Model
      */
     public function remainingBalance(): float
     {
-        return $this->total() - $this->receivedAmount();
+        return round($this->total() - $this->receivedAmount(), 2);
     }
 
     /**
@@ -180,7 +227,7 @@ class Order extends Model
      */
     public function isFullyPaid(): bool
     {
-        return $this->receivedAmount() >= $this->total();
+        return $this->receivedAmount() + 0.00001 >= $this->total();
     }
 
     public function isCancelled(): bool

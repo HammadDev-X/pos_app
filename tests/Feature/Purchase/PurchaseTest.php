@@ -397,7 +397,7 @@ test('purchase item requires valid product', function () {
 test('user can add product to purchase cart', function () {
     actingAs($this->user)
         ->post(route('purchase-cart.store'), [
-            'barcode' => $this->product->barcode,
+            'product_id' => $this->product->id,
         ])
         ->assertOk()
         ->assertJson(['message' => 'Product added to cart!']);
@@ -418,7 +418,7 @@ test('adding same product to cart increases quantity', function () {
 
     actingAs($this->user)
         ->post(route('purchase-cart.store'), [
-            'barcode' => $this->product->barcode,
+            'product_id' => $this->product->id,
         ])
         ->assertOk();
 

@@ -786,8 +786,7 @@ label {
         padding-top: 0;
     }
 
-    .cart-line-main,
-    .cart-line-actions {
+    .cart-line-main {
         align-items: center;
         display: flex;
         justify-content: space-between;
@@ -798,13 +797,40 @@ label {
         font-size: 0.875rem;
     }
 
-    .cart-line-actions {
-        gap: 8px;
+    .cart-line-fields {
+        align-items: end;
+        display: grid;
+        gap: 10px;
+        grid-template-columns: minmax(70px, 0.75fr) minmax(100px, 1fr) minmax(86px, 0.9fr) 44px;
         margin-top: 8px;
     }
 
-    .qty {
-        max-width: 76px;
+    .cart-line-fields label,
+    .line-total {
+        margin: 0;
+    }
+
+    .cart-line-fields label span,
+    .line-total span {
+        color: #6b7280;
+        display: block;
+        font-size: 0.72rem;
+        font-weight: 700;
+        line-height: 1.1;
+        margin-bottom: 4px;
+        text-transform: uppercase;
+    }
+
+    .line-total strong {
+        display: block;
+        font-size: 1rem;
+        line-height: 34px;
+        white-space: nowrap;
+    }
+
+    .line-remove {
+        height: 38px;
+        width: 44px;
     }
 
     .pos-search {
@@ -1557,6 +1583,42 @@ label {
     margin: 2px;
 }
 
+.admin-filter-bar .form-row {
+    flex-wrap: nowrap;
+}
+
+.order-filter-submit {
+    min-width: 132px;
+    white-space: nowrap;
+}
+
+.product-list-card {
+    overflow: hidden;
+}
+
+.product-list-card .card-body {
+    background: rgba(255, 255, 255, 0.88);
+}
+
+.product-list-table {
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(155, 45, 34, 0.14);
+    border-radius: 8px;
+}
+
+.product-list-table .table {
+    min-width: 1280px;
+}
+
+.product-list-table th,
+.product-list-table td {
+    vertical-align: middle;
+}
+
+.product-list-table .btn {
+    margin-bottom: 0.25rem;
+}
+
 .purchase-cart {
     overflow-x: auto;
 }
@@ -1633,5 +1695,312 @@ label {
 
     .small-box h3 {
         font-size: 1.65rem;
+    }
+}
+
+// Red/green system theme inspired by the supplied abstract reference.
+:root {
+    --ui-bg: #f4eee8;
+    --ui-surface: rgba(255, 255, 255, 0.94);
+    --ui-surface-soft: #fff7ef;
+    --ui-sidebar: #310c0e;
+    --ui-sidebar-2: #063f2a;
+    --ui-text: #261916;
+    --ui-muted: #756660;
+    --ui-border: rgba(155, 45, 34, 0.18);
+    --ui-primary: #08a64f;
+    --ui-primary-dark: #06733e;
+    --ui-accent: #f28b32;
+    --ui-danger: #e01822;
+    --ui-info: #b9171e;
+    --ui-shadow: 0 18px 48px rgba(95, 18, 16, 0.12);
+    --theme-red: #e01822;
+    --theme-red-dark: #8f1116;
+    --theme-red-soft: #ffebe8;
+    --theme-green: #08a64f;
+    --theme-green-dark: #06733e;
+    --theme-green-soft: #e7f8ed;
+    --theme-amber: #f28b32;
+}
+
+body,
+.public-shell,
+.receipt-page {
+    background:
+        radial-gradient(circle at 92% 0%, rgba(255, 58, 70, 0.42), rgba(255, 58, 70, 0) 34%),
+        radial-gradient(circle at 0% 34%, rgba(242, 139, 50, 0.28), rgba(242, 139, 50, 0) 24%),
+        radial-gradient(circle at 3% 100%, rgba(8, 166, 79, 0.32), rgba(8, 166, 79, 0) 31%),
+        linear-gradient(155deg, #fff8f0 0%, #ffe5df 32%, #ef2a2f 32%, #d71921 54%, #668b46 76%, #08a64f 100%);
+    background-attachment: fixed;
+    color: var(--ui-text);
+}
+
+body::before {
+    background:
+        linear-gradient(160deg, transparent 0 47%, rgba(255, 255, 255, 0.16) 48%, transparent 58%),
+        linear-gradient(18deg, transparent 0 58%, rgba(8, 166, 79, 0.2) 59%, transparent 66%),
+        radial-gradient(ellipse at 92% 18%, rgba(255, 255, 255, 0.2), transparent 28%),
+        radial-gradient(ellipse at 18% 82%, rgba(255, 255, 255, 0.18), transparent 34%);
+    content: "";
+    inset: 0;
+    pointer-events: none;
+    position: fixed;
+    z-index: -1;
+}
+
+.content-wrapper,
+.wrapper {
+    background: transparent;
+}
+
+.content-header h1,
+.card-title,
+.pos-panel-header h2,
+.receipt-header h1 {
+    color: #2d1613;
+}
+
+.main-header.navbar,
+.public-navbar {
+    background:
+        linear-gradient(90deg, rgba(255, 255, 255, 0.92), rgba(255, 246, 239, 0.88)),
+        rgba(255, 255, 255, 0.9) !important;
+    border-bottom-color: rgba(224, 24, 34, 0.18);
+    box-shadow: 0 10px 30px rgba(95, 18, 16, 0.13);
+}
+
+.main-sidebar {
+    background:
+        radial-gradient(circle at 8% 16%, rgba(242, 139, 50, 0.32), transparent 28%),
+        linear-gradient(180deg, rgba(224, 24, 34, 0.94), rgba(116, 17, 18, 0.96) 42%, rgba(6, 63, 42, 0.98) 100%) !important;
+}
+
+.brand-link {
+    background: rgba(49, 12, 14, 0.22);
+}
+
+.nav-sidebar .nav-link.active,
+.nav-sidebar .menu-open > .nav-link {
+    background: linear-gradient(135deg, var(--theme-green), var(--theme-green-dark)) !important;
+    box-shadow: 0 12px 28px rgba(8, 166, 79, 0.35);
+}
+
+.nav-sidebar .nav-link:hover {
+    background: rgba(255, 255, 255, 0.12) !important;
+}
+
+.card,
+.small-box,
+.info-box,
+.modal-content,
+.pos-panel,
+.pos-summary > div,
+.receipt,
+.metric-card,
+.ledger-metric,
+.order-product .item,
+.quick-item,
+.category-buttons button,
+.purchase-total {
+    background:
+        linear-gradient(145deg, rgba(255, 245, 237, 0.76), rgba(255, 255, 255, 0.94) 46%, rgba(232, 250, 238, 0.6)),
+        var(--ui-surface) !important;
+    border-color: var(--ui-border) !important;
+}
+
+.card-header,
+.card-footer,
+.table thead th,
+.dropdown-menu,
+.dataTables_wrapper .dataTables_filter input,
+.dataTables_wrapper .dataTables_length select,
+.form-control,
+.custom-select,
+.select2-container--bootstrap4 .select2-selection {
+    background-color: rgba(255, 248, 241, 0.96);
+    border-color: rgba(155, 45, 34, 0.2);
+}
+
+.table-hover tbody tr:hover,
+.dropdown-item:hover,
+.monthly-sales-day.has-sales,
+.pos-workspace .quick-item:hover,
+.pos-workspace .category-buttons button:hover,
+.pos-workspace .category-buttons button.active {
+    background: var(--theme-green-soft);
+}
+
+.btn-primary,
+.btn-success,
+.pagination .page-item.active .page-link {
+    background: linear-gradient(135deg, var(--theme-green), var(--theme-green-dark)) !important;
+    border-color: var(--theme-green) !important;
+}
+
+.btn-primary:hover,
+.btn-success:hover {
+    background: linear-gradient(135deg, var(--theme-green-dark), #045a31) !important;
+    border-color: var(--theme-green-dark) !important;
+}
+
+.btn-danger,
+.btn-outline-danger:hover {
+    background: linear-gradient(135deg, var(--theme-red), var(--theme-red-dark)) !important;
+    border-color: var(--theme-red) !important;
+}
+
+.btn-default,
+.btn-light,
+.btn-secondary {
+    background: #fff0e7 !important;
+    border-color: rgba(155, 45, 34, 0.24) !important;
+}
+
+.form-control:focus,
+.custom-select:focus {
+    border-color: var(--theme-green);
+    box-shadow: 0 0 0 0.18rem rgba(8, 166, 79, 0.16);
+}
+
+.small-box .icon {
+    color: rgba(224, 24, 34, 0.15);
+}
+
+.small-box .small-box-footer,
+.btn-tool,
+a,
+.pagination .page-link,
+.purchase-total .amount {
+    color: var(--theme-green-dark);
+}
+
+a:hover,
+.main-header .nav-link:hover,
+.main-header .nav-link:focus {
+    color: var(--theme-red-dark) !important;
+}
+
+.dashboard-page .metric-card::after {
+    background: linear-gradient(135deg, var(--theme-red), var(--theme-amber));
+    opacity: 0.18;
+}
+
+.dashboard-page .metric-stock::after,
+.dashboard-page .metric-cash::after,
+.dashboard-page .metric-recovery::after {
+    background: linear-gradient(135deg, var(--theme-green), var(--theme-green-dark));
+}
+
+.dashboard-page .sales-bar-track span {
+    background: linear-gradient(180deg, var(--theme-red), var(--theme-amber) 52%, var(--theme-green));
+}
+
+.badge-success,
+.stock-badge {
+    background: var(--theme-green-soft);
+    color: var(--theme-green-dark);
+}
+
+.badge-danger {
+    background: var(--theme-red-soft);
+    color: var(--theme-red-dark);
+}
+
+.badge-warning,
+.order-product .stock-badge.low {
+    background: #fff1d6;
+    color: #8b4d05;
+}
+
+.login-page {
+    background:
+        linear-gradient(140deg, rgba(74, 10, 11, 0.86), rgba(224, 24, 34, 0.58) 46%, rgba(8, 166, 79, 0.68)),
+        radial-gradient(circle at 88% 8%, rgba(255, 255, 255, 0.22), transparent 32%),
+        linear-gradient(155deg, #e01822, #a51717 52%, #08a64f);
+}
+
+.login-card-body {
+    background:
+        linear-gradient(145deg, rgba(255, 247, 240, 0.96), rgba(238, 255, 244, 0.9)),
+        #fff;
+    box-shadow: 0 22px 60px rgba(49, 12, 14, 0.24);
+}
+
+.receipt {
+    background: #fffdfa !important;
+}
+
+.customer-table-wrap {
+    border: 1px solid rgba(155, 45, 34, 0.14);
+    border-radius: 8px;
+}
+
+.customer-table {
+    min-width: 980px;
+}
+
+.customer-table thead th {
+    font-size: 0.78rem;
+    letter-spacing: 0;
+    text-transform: uppercase;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.customer-table td {
+    vertical-align: middle;
+}
+
+.customer-identity {
+    align-items: center;
+    display: flex;
+    gap: 0.75rem;
+    min-width: 190px;
+}
+
+.customer-identity img {
+    border-radius: 8px;
+    height: 44px;
+    object-fit: cover;
+    width: 44px;
+}
+
+.customer-identity strong,
+.customer-identity span {
+    display: block;
+    line-height: 1.25;
+}
+
+.customer-identity span {
+    color: var(--ui-muted);
+    font-size: 0.82rem;
+}
+
+.customer-address {
+    max-width: 220px;
+    white-space: normal;
+}
+
+.customer-actions {
+    white-space: nowrap;
+}
+
+.customer-actions .btn {
+    align-items: center;
+    display: inline-flex;
+    height: 36px;
+    justify-content: center;
+    margin: 0 0.12rem 0.18rem;
+    padding: 0;
+    width: 36px;
+}
+
+@media (max-width: 767.98px) {
+    .customer-table {
+        min-width: 860px;
+    }
+
+    .customer-identity {
+        min-width: 160px;
     }
 }
