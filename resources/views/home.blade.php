@@ -132,22 +132,21 @@
             <div class="card table-card">
                 <div class="card-header"><h3 class="card-title">Monthly Sales Calendar / Day-wise Sales Graph</h3></div>
                 <div class="card-body">
-                    @php
-                        $maxMonthlySales = max((float) collect($monthly_calendar)->max('sales'), 1);
-                    @endphp
                     <div class="monthly-sales-chart">
-                        @foreach($monthly_calendar as $day)
-                            @php
+                        <?php foreach ($monthly_calendar as $day): ?>
+                            <?php
                                 $salesAmount = (float) $day['sales'];
-                                $barHeight = max(($salesAmount / $maxMonthlySales) * 100, $salesAmount > 0 ? 8 : 0);
-                            @endphp
+                                $barHeight = $monthly_max_sales > 0
+                                    ? max(($salesAmount / $monthly_max_sales) * 100, $salesAmount > 0 ? 8 : 0)
+                                    : 0;
+                            ?>
                             <div class="sales-bar" title="{{ $day['date'] }}: {{ config('settings.currency_symbol') }} {{ number_format($salesAmount, 2) }}">
                                 <div class="sales-bar-track">
                                     <span style="height: {{ $barHeight }}%"></span>
                                 </div>
                                 <small>{{ $day['day'] }}</small>
                             </div>
-                        @endforeach
+                        <?php endforeach; ?>
                     </div>
                     <div class="monthly-sales-grid">
                         @foreach($monthly_calendar as $day)
@@ -203,10 +202,10 @@
                             </thead>
                             <tbody>
                                 @forelse($latest_orders as $order)
-                                    @php
+                                    <?php
                                         $orderTotal = $order->total();
                                         $orderReceived = $order->receivedAmount();
-                                    @endphp
+                                    ?>
                                     <tr>
                                         <td><a href="{{ route('orders.show', $order) }}">#{{ $order->id }}</a></td>
                                         <td>{{ $order->getCustomerName() }}</td>

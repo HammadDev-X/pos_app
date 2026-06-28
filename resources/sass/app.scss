@@ -1561,10 +1561,15 @@ label {
 
 .admin-filter-bar {
     align-items: end;
-    display: grid;
+    display: flex;
     gap: 14px;
-    grid-template-columns: minmax(0, 1fr) minmax(320px, 540px);
+    justify-content: flex-end;
     margin-bottom: 16px;
+}
+
+.orders-filter-wrap {
+    max-width: 720px;
+    width: 100%;
 }
 
 .admin-filter-bar .btn {
@@ -1584,11 +1589,11 @@ label {
 }
 
 .admin-filter-bar .form-row {
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
 }
 
 .order-filter-submit {
-    min-width: 132px;
+    min-width: 0;
     white-space: nowrap;
 }
 

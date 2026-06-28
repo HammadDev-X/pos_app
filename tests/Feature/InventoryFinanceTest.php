@@ -184,6 +184,50 @@ test('business reports expose daily weekly monthly and inventory report sections
         ->assertViewHas('expiringSoonItems', fn ($items) => $items->pluck('product.name')->contains('Available Fish'));
 });
 
+test('dashboard renders when monthly sales are zero', function () {
+    $this->get(route('home'))
+        ->assertOk()
+        ->assertSee('Monthly Sales Calendar');
+});
+
+test('account payments count toward paid amount and remaining balance', function () {
+    $product = Product::factory()->create([
+        'name' => 'Arabica Coffee Beans',
+        'price' => 18.50,
+        'purchase_price' => 10,
+        'quantity' => 10,
+    ]);
+    $order = Order::factory()->create(['user_id' => $this->user->id]);
+    $order->items()->create([
+        'product_id' => $product->id,
+        'price' => 18.50,
+        'discount' => 5.00,
+        'quantity' => 1,
+        'unit_cost' => 10,
+    ]);
+    $order->payments()->create([
+        'amount' => 10.00,
+        'method' => 'cash',
+        'user_id' => $this->user->id,
+    ]);
+    $order->payments()->create([
+        'amount' => 3.00,
+        'method' => 'account',
+        'user_id' => $this->user->id,
+    ]);
+
+    $order->load(['items', 'payments']);
+
+    expect($order->total())->toBe(13.5)
+        ->and($order->receivedAmount())->toBe(13.0)
+        ->and($order->remainingBalance())->toBe(0.5);
+
+    $this->get(route('orders.index'))
+        ->assertOk()
+        ->assertSee('13.00')
+        ->assertSee('0.50');
+});
+
 test('business and product analytics use the same net sales and gross profit formula', function () {
     $product = Product::factory()->create([
         'name' => 'Profit Check Pack',

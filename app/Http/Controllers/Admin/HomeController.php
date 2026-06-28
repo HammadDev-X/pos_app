@@ -65,6 +65,7 @@ class HomeController extends Controller
             'other_expenses' => $expenseTotals['other'],
             'expense_breakdown' => $expenseBreakdown,
             'monthly_calendar' => $monthlyCalendar,
+            'monthly_max_sales' => max((float) collect($monthlyCalendar)->max('sales'), 0),
             'products_count' => Product::count(),
             'active_products_count' => Product::active()->count(),
             'low_stock_count' => Product::lowStock()->count(),

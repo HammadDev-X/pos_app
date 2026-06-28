@@ -10,17 +10,16 @@
     <div class="card">
         <div class="card-body">
             <div class="admin-filter-bar">
-                <div></div>
-                <div>
-                    <form action="{{route('orders.index')}}">
+                <div class="orders-filter-wrap">
+                    <form action="{{route('orders.index')}}" class="orders-filter-form">
                         <div class="form-row align-items-end">
-                            <div class="col-sm-5 mb-2 mb-sm-0">
+                            <div class="col-12 col-md-4 mb-2 mb-md-0">
                                 <input type="date" name="start_date" class="form-control" value="{{request('start_date')}}" />
                             </div>
-                            <div class="col-sm-5 mb-2 mb-sm-0">
+                            <div class="col-12 col-md-4 mb-2 mb-md-0">
                                 <input type="date" name="end_date" class="form-control" value="{{request('end_date')}}" />
                             </div>
-                            <div class="col-sm-2">
+                            <div class="col-12 col-md-4">
                                 <button class="btn btn-primary btn-block order-filter-submit" type="submit">
                                     <i class="fas fa-filter mr-1"></i>{{ __('order.submit') }}
                                 </button>

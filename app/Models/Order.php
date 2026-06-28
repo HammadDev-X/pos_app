@@ -167,21 +167,11 @@ class Order extends Model
     }
 
     /**
-     * Calculate received amount from payments.
+     * Calculate received amount from all recorded payments.
      */
     public function receivedAmount(): float
     {
-        if ($this->relationLoaded('payments')) {
-            return round((float) $this->payments
-                ->reject(fn (Payment $payment): bool => $payment->isAccountTender())
-                ->sum(fn (Payment $payment): float => (float) $payment->amount), 2);
-        }
-
-        return round((float) $this->payments()
-            ->where(fn (Builder $query) => $query
-                ->whereNotIn('method', Payment::ACCOUNT_METHODS)
-                ->orWhereNull('method'))
-            ->sum('amount'), 2);
+        return $this->paymentTotal();
     }
 
     public function accountAmount(): float
