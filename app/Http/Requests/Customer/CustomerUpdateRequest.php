@@ -7,6 +7,13 @@ use Illuminate\Validation\Rule;
 
 class CustomerUpdateRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'phone' => $this->localPhoneDigits($this->input('phone')),
+        ]);
+    }
+
     public function authorize(): bool
     {
         return true;
@@ -24,10 +31,9 @@ class CustomerUpdateRequest extends FormRequest
                 Rule::unique('customers', 'customer_code')->ignore($this->route('customer')),
             ],
             'email' => ['nullable', 'email', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:20'],
+            'phone' => ['nullable', 'regex:/^[0-9]{10}$/'],
             'address' => ['nullable', 'string', 'max:500'],
             'pending_amount' => ['nullable', 'numeric', 'min:0', 'decimal:0,2'],
-            'avatar' => ['nullable', 'image', 'max:2048'],
         ];
     }
 
@@ -41,9 +47,22 @@ class CustomerUpdateRequest extends FormRequest
             'customer_code.required' => __('Customer code is required.'),
             'customer_code.unique' => __('This customer code is already in use.'),
             'email.email' => __('customer.validation.email_invalid'),
-            'phone.max' => __('customer.validation.phone_max'),
-            'avatar.image' => __('customer.validation.avatar_image'),
-            'avatar.max' => __('customer.validation.avatar_max'),
+            'phone.regex' => __('Phone number must be exactly 10 digits after +92.'),
         ];
+    }
+
+    private function localPhoneDigits($phone): ?string
+    {
+        if (blank($phone)) {
+            return null;
+        }
+
+        $digits = preg_replace('/\D+/', '', (string) $phone);
+
+        if (strlen($digits) === 12 && str_starts_with($digits, '92')) {
+            return substr($digits, 2);
+        }
+
+        return $digits;
     }
 }

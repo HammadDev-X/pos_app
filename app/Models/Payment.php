@@ -32,6 +32,17 @@ class Payment extends Model
 {
     public const ACCOUNT_METHODS = ['account', 'credit'];
 
+    public const METHOD_LABELS = [
+        'cash' => 'Cash',
+        'card' => 'Card',
+        'bank_transfer' => 'Bank transfer',
+        'mobile_money' => 'Mobile money',
+        'jazzcash' => 'JazzCash',
+        'easypaisa' => 'EasyPaisa',
+        'account' => 'Account',
+        'credit' => 'Credit',
+    ];
+
     protected $fillable = [
         'amount',
         'method',
@@ -56,6 +67,11 @@ class Payment extends Model
     public function formattedAmount(): string
     {
         return number_format((float) $this->amount, 2);
+    }
+
+    public static function methodLabel(?string $method): string
+    {
+        return self::METHOD_LABELS[$method ?? 'cash'] ?? ucfirst(str_replace('_', ' ', $method ?? 'cash'));
     }
 
     public function isAccountTender(): bool

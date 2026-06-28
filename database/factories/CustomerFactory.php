@@ -28,7 +28,6 @@ class CustomerFactory extends Factory
             'phone' => $this->faker->optional()->phoneNumber(),
             'address' => $this->faker->optional()->address(),
             'pending_amount' => 0,
-            'avatar' => $this->faker->optional()->imageUrl(200, 200, 'people', true),
             'user_id' => User::factory()
         ];
     }
@@ -51,13 +50,6 @@ class CustomerFactory extends Factory
     {
         return $this->state(fn(array $attributes): array => [
             'address' => null,
-        ]);
-    }
-
-    public function withOutAvatar(): CustomerFactory|Factory
-    {
-        return $this->state(fn(array $attributes): array => [
-            'avatar' => null,
         ]);
     }
 

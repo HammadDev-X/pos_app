@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * @property int $id
@@ -18,11 +17,9 @@ use Illuminate\Support\Facades\Storage;
  * @property string|null $phone
  * @property string|null $address
  * @property string|float $pending_amount
- * @property string|null $avatar
  * @property int $user_id
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
- * @property-read string $avatar_url
  * @property-read string $full_name
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Customer byUser($userId)
  * @method static \Database\Factories\CustomerFactory factory($count = null, $state = [])
@@ -30,7 +27,6 @@ use Illuminate\Support\Facades\Storage;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Customer newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Customer query()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Customer whereAddress($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Customer whereAvatar($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Customer whereCreatedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Customer whereEmail($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Customer whereFirstName($value)
@@ -53,7 +49,6 @@ class Customer extends Model
         'phone',
         'address',
         'pending_amount',
-        'avatar',
         'user_id',
     ];
 
@@ -61,29 +56,12 @@ class Customer extends Model
         'pending_amount' => 'decimal:2',
     ];
 
-    public function getAvatarUrl(): string
-    {
-        return Storage::url($this->avatar);
-    }
-
     /**
      * Get the customer's full name.
      */
     public function getFullNameAttribute(): string
     {
         return "{$this->first_name} {$this->last_name}";
-    }
-
-    /**
-     * Get the customer avatar URL.
-     */
-    public function getAvatarUrlAttribute(): string
-    {
-        if ($this->avatar) {
-            return Storage::disk('public')->url($this->avatar);
-        }
-
-        return asset('images/avatar-placeholder.png');
     }
 
     public function orders(): HasMany

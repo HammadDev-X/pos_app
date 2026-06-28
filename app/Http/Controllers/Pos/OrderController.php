@@ -130,6 +130,17 @@ class OrderController extends Controller
         return view('orders.receipt', ['order' => $order]);
     }
 
+    public function pdf(Order $order)
+    {
+        $order->load(['customer', 'items.product', 'payments.user']);
+
+        $pdf = app('dompdf.wrapper');
+        $pdf->loadView('orders.receipt-pdf', ['order' => $order]);
+        $pdf->setPaper([0, 0, 226.77, 841.89], 'portrait');
+
+        return $pdf->stream("invoice-{$order->id}.pdf");
+    }
+
     public function partialPayment(PartialPaymentRequest $request)
     {
         $order = Order::findOrFail($request->input('order_id'));

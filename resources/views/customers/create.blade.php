@@ -8,7 +8,7 @@
     <div class="card">
         <div class="card-body">
 
-            <form action="{{ route('customers.store') }}" method="POST" enctype="multipart/form-data">
+            <form action="{{ route('customers.store') }}" method="POST">
                 @csrf
 
                 <div class="form-group">
@@ -60,10 +60,17 @@
 
                 <div class="form-group">
                     <label for="phone">{{ __('customer.Phone') }}</label>
-                    <input type="text" name="phone" class="form-control @error('phone') is-invalid @enderror" id="phone"
-                           placeholder="{{ __('customer.Phone') }}" value="{{ old('phone') }}">
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text">+92</span>
+                        </div>
+                        <input type="text" name="phone" class="form-control @error('phone') is-invalid @enderror" id="phone"
+                               inputmode="numeric" pattern="[0-9]{10}" maxlength="10"
+                               placeholder="3001234567" value="{{ old('phone') }}">
+                    </div>
+                    <small class="form-text text-muted">Enter 10 digits only after +92.</small>
                     @error('phone')
-                    <span class="invalid-feedback" role="alert">
+                    <span class="invalid-feedback d-block" role="alert">
                         <strong>{{ $message }}</strong>
                     </span>
                     @enderror
@@ -93,31 +100,8 @@
                     @enderror
                 </div>
 
-                <div class="form-group">
-                    <label for="avatar">{{ __('customer.Avatar') }}</label>
-                    <div class="custom-file">
-                        <input type="file" class="custom-file-input" name="avatar" id="avatar">
-                        <label class="custom-file-label" for="avatar">{{ __('customer.Choose_file') }}</label>
-                    </div>
-                    @error('avatar')
-                    <span class="invalid-feedback" role="alert">
-                    <strong>{{ $message }}</strong>
-                </span>
-                    @enderror
-                </div>
-
-
                 <button class="btn btn-primary" type="submit">{{ __('common.Create') }}</button>
             </form>
         </div>
     </div>
-@endsection
-
-@section('js')
-    <script src="{{ asset('plugins/bs-custom-file-input/bs-custom-file-input.min.js') }}"></script>
-    <script>
-        $(document).ready(function () {
-            bsCustomFileInput.init();
-        });
-    </script>
 @endsection

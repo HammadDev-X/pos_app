@@ -21,6 +21,8 @@ const paymentLabels = {
     account: "Account",
 };
 
+const apiUrl = (path) => `${window.APP?.base_url || ""}${path}`;
+
 class Cart extends Component {
     constructor(props) {
         super(props);
@@ -31,6 +33,7 @@ class Cart extends Component {
             categories: [],
             openItems: [],
             customers: [],
+            customerSearch: "",
             lookup: "",
             search: "",
             selectedCategoryId: "",
@@ -55,7 +58,9 @@ class Cart extends Component {
         this.handleSeach = this.handleSeach.bind(this);
         this.handleSelectCategory = this.handleSelectCategory.bind(this);
         this.handleAddOpenItem = this.handleAddOpenItem.bind(this);
-        this.setCustomerId = this.setCustomerId.bind(this);
+        this.handleCustomerSearch = this.handleCustomerSearch.bind(this);
+        this.selectCustomer = this.selectCustomer.bind(this);
+        this.clearCustomer = this.clearCustomer.bind(this);
         this.setPaymentMethod = this.setPaymentMethod.bind(this);
         this.setItemDiscount = this.setItemDiscount.bind(this);
         this.setDueDate = this.setDueDate.bind(this);
@@ -74,13 +79,13 @@ class Cart extends Component {
 
     loadTranslations() {
         axios
-            .get("/admin/locale/cart")
+            .get(apiUrl("/admin/locale/cart"))
             .then((res) => this.setState({ translations: res.data }))
             .catch(() => this.setState({ translations: {} }));
     }
 
     loadCustomers() {
-        axios.get("/admin/customers", {
+        axios.get(apiUrl("/admin/customers"), {
             headers: { Accept: "application/json", "Content-Type": "application/json" },
         }).then((res) => {
             this.setState({ customers: res.data });
@@ -88,7 +93,7 @@ class Cart extends Component {
     }
 
     loadCategories() {
-        axios.get("/admin/categories?active=1", {
+        axios.get(apiUrl("/admin/categories?active=1"), {
             headers: { Accept: "application/json", "Content-Type": "application/json" },
         }).then((res) => {
             this.setState({ categories: Array.isArray(res.data) ? res.data : [] });
@@ -100,7 +105,7 @@ class Cart extends Component {
         if (search) params.set("search", search);
         if (categoryId) params.set("category_id", categoryId);
 
-        axios.get(`/admin/products?${params.toString()}`, {
+        axios.get(apiUrl(`/admin/products?${params.toString()}`), {
             headers: { Accept: "application/json", "Content-Type": "application/json" },
         }).then((res) => {
             this.setState({ products: res.data.data || [] });
@@ -108,7 +113,7 @@ class Cart extends Component {
     }
 
     loadQuickItems() {
-        axios.get("/admin/products?is_quick=1&active=1&per_page=100", {
+        axios.get(apiUrl("/admin/products?is_quick=1&active=1&per_page=100"), {
             headers: { Accept: "application/json", "Content-Type": "application/json" },
         }).then((res) => {
             this.setState({ quickItems: res.data.data || [] });
@@ -116,7 +121,7 @@ class Cart extends Component {
     }
 
     loadCart() {
-        axios.get("/admin/cart", {
+        axios.get(apiUrl("/admin/cart"), {
             headers: { Accept: "application/json", "Content-Type": "application/json" },
         }).then((res) => {
             const cart = Array.isArray(res.data) ? res.data.map((item) => ({
@@ -141,7 +146,7 @@ class Cart extends Component {
         if (!search) return;
 
         axios
-            .post("/admin/cart", { search })
+            .post(apiUrl("/admin/cart"), { search })
             .then(() => {
                 this.loadCart();
                 this.setState({ lookup: "" });
@@ -164,7 +169,7 @@ class Cart extends Component {
         if (!quantity || quantity <= 0) return;
 
         axios
-            .post("/admin/cart/change-qty", { product_id, quantity })
+            .post(apiUrl("/admin/cart/change-qty"), { product_id, quantity })
             .catch((err) => {
                 Swal.fire("Error!", err.response?.data?.message || "Unable to change quantity", "error");
                 this.loadCart();
@@ -234,14 +239,14 @@ class Cart extends Component {
 
     handleClickDelete(product_id) {
         axios
-            .post("/admin/cart/delete", { product_id, _method: "DELETE" })
+            .post(apiUrl("/admin/cart/delete"), { product_id, _method: "DELETE" })
             .then(() => {
                 this.setState({ cart: this.state.cart.filter((c) => c.id !== product_id) });
             });
     }
 
     handleEmptyCart() {
-        axios.post("/admin/cart/empty", { _method: "DELETE" }).then(() => {
+        axios.post(apiUrl("/admin/cart/empty"), { _method: "DELETE" }).then(() => {
             this.setState({ cart: [], openItems: [] });
         });
     }
@@ -260,7 +265,7 @@ class Cart extends Component {
             });
         }
 
-        axios.post("/admin/cart", { product_id: product.id })
+        axios.post(apiUrl("/admin/cart"), { product_id: product.id })
             .then(() => {
                 this.loadCart();
                 this.loadProducts(this.state.search, this.state.selectedCategoryId);
@@ -272,8 +277,38 @@ class Cart extends Component {
             });
     }
 
-    setCustomerId(event) {
-        this.setState({ customer_id: event.target.value });
+    customerLabel(customer) {
+        if (!customer) return "";
+
+        return `${customer.customer_code || "No code"} - ${customer.first_name || ""} ${customer.last_name || ""}`.trim();
+    }
+
+    handleCustomerSearch(event) {
+        const customerSearch = event.target.value;
+        const selectedCustomer = this.state.customers.find((customer) => String(customer.id) === String(this.state.customer_id));
+
+        this.setState({
+            customerSearch,
+            customer_id: selectedCustomer && customerSearch === this.customerLabel(selectedCustomer)
+                ? selectedCustomer.id
+                : "",
+        });
+    }
+
+    selectCustomer(customer) {
+        if (!customer) {
+            this.clearCustomer();
+            return;
+        }
+
+        this.setState({
+            customer_id: customer.id,
+            customerSearch: this.customerLabel(customer),
+        });
+    }
+
+    clearCustomer() {
+        this.setState({ customer_id: "", customerSearch: "" });
     }
 
     setPaymentMethod(event) {
@@ -351,7 +386,7 @@ class Cart extends Component {
                 ].filter(Boolean);
 
                 return axios
-                    .post("/admin/orders", {
+                    .post(apiUrl("/admin/orders"), {
                         customer_id: this.state.customer_id,
                         amount: primaryAmount.toFixed(2),
                         payment_method: this.state.payment_method,
@@ -379,6 +414,7 @@ class Cart extends Component {
                             due_date: currentDateInput(),
                             lookup: "",
                             search: "",
+                            customerSearch: "",
                         });
                         return res.data;
                     })
@@ -398,7 +434,7 @@ class Cart extends Component {
                     cancelButtonText: this.state.translations["new_sale"] || "New Sale",
                 }).then((receiptResult) => {
                     if (receiptResult.isConfirmed) {
-                        window.open(`/admin/orders/${result.value.order_id}`, "_blank");
+                        window.open(apiUrl(`/admin/orders/${result.value.order_id}`), "_blank");
                     }
                 });
             }
@@ -413,6 +449,7 @@ class Cart extends Component {
             categories = [],
             openItems = [],
             customers = [],
+            customerSearch = "",
             lookup = "",
             translations = {},
             payment_method = "cash",
@@ -421,6 +458,12 @@ class Cart extends Component {
         } = this.state;
         const total = this.getTotal(cart);
         const hasSaleItems = cart.length > 0 || openItems.length > 0;
+        const customerTerm = customerSearch.trim().toLowerCase();
+        const selectedCustomer = customers.find((cus) => String(cus.id) === String(this.state.customer_id));
+        const visibleCustomers = customerTerm
+            ? customers.filter((cus) => this.customerLabel(cus).toLowerCase().includes(customerTerm)).slice(0, 8)
+            : customers.slice(0, 8);
+        const showCustomerSuggestions = customerSearch.length > 0 && !selectedCustomer;
 
         return (
             <div className="pos-workspace">
@@ -509,14 +552,41 @@ class Cart extends Component {
                                 </div>
                             </form>
 
-                            <select className="form-control mb-2" value={this.state.customer_id} onChange={this.setCustomerId}>
-                                <option value="">{translations["general_customer"] || "General Customer"}</option>
-                                {customers.map((cus) => (
-                                    <option key={cus.id} value={cus.id}>
-                                        {`${cus.customer_code || "No code"} - ${cus.first_name} ${cus.last_name}`}
-                                    </option>
-                                ))}
-                            </select>
+                            <div className="customer-picker mb-2">
+                                <div className="input-group">
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        placeholder={translations["general_customer"] || "General Customer"}
+                                        value={selectedCustomer ? this.customerLabel(selectedCustomer) : customerSearch}
+                                        onChange={this.handleCustomerSearch}
+                                        onFocus={() => {
+                                            if (!selectedCustomer && !customerSearch) {
+                                                this.setState({ customerSearch: "" });
+                                            }
+                                        }}
+                                    />
+                                    {(selectedCustomer || customerSearch) ? (
+                                        <div className="input-group-append">
+                                            <button type="button" className="btn btn-default" onClick={this.clearCustomer}>
+                                                <i className="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    ) : null}
+                                </div>
+                                {showCustomerSuggestions ? (
+                                    <div className="customer-picker-menu">
+                                        {visibleCustomers.length > 0 ? visibleCustomers.map((cus) => (
+                                            <button type="button" key={cus.id} onClick={() => this.selectCustomer(cus)}>
+                                                <span>{cus.customer_code || "No code"}</span>
+                                                <strong>{`${cus.first_name || ""} ${cus.last_name || ""}`.trim()}</strong>
+                                            </button>
+                                        )) : (
+                                            <div className="customer-picker-empty">No matching customer</div>
+                                        )}
+                                    </div>
+                                ) : null}
+                            </div>
 
                             <select className="form-control mb-3" value={payment_method} onChange={this.setPaymentMethod}>
                                 <option value="cash">{translations["cash"] || "Cash"}</option>

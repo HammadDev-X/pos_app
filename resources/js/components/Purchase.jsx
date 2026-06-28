@@ -4,6 +4,8 @@ import axios from "axios";
 import Swal from "sweetalert2";
 import { sum } from "lodash";
 
+const apiUrl = (path) => `${window.APP?.base_url || ""}${path}`;
+
 class Purchase extends Component {
     constructor(props) {
         super(props);
@@ -50,42 +52,34 @@ class Purchase extends Component {
 
     loadTranslations() {
         axios
-            .get("/admin/locale/cart")
+            .get(apiUrl("/admin/locale/cart"))
             .then((res) => {
                 const translations = res.data;
                 this.setState({ translations });
             })
-            .catch((error) => {
-                console.error("Error loading translations:", error);
+            .catch(() => {
                 this.setState({ translations: {} });
             });
     }
 
     loadSuppliers() {
-        axios.get(`/admin/suppliers`, {
+        axios.get(apiUrl("/admin/suppliers"), {
             headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
             }
         }).then((res) => {
-            console.log('Suppliers API Response:', res.data);
-            console.log('Is Array?', Array.isArray(res.data));
-            console.log('Has data property?', res.data.data);
-
-            // Handle both array and paginated response
             const suppliers = Array.isArray(res.data) ? res.data : (res.data.data || []);
-            console.log('Final suppliers:', suppliers);
 
             this.setState({ suppliers });
-        }).catch((error) => {
-            console.error("Error loading suppliers:", error);
+        }).catch(() => {
             this.setState({ suppliers: [] });
         });
     }
 
     loadProducts(search = "") {
         const query = !!search ? `?search=${search}` : "";
-        axios.get(`/admin/products${query}`, {
+        axios.get(apiUrl(`/admin/products${query}`), {
             headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
@@ -93,14 +87,13 @@ class Purchase extends Component {
         }).then((res) => {
             const products = res.data.data || [];
             this.setState({ products });
-        }).catch((error) => {
-            console.error("Error loading products:", error);
+        }).catch(() => {
             this.setState({ products: [] });
         });
     }
 
     loadCart() {
-        axios.get("/admin/purchase-cart", {
+        axios.get(apiUrl("/admin/purchase-cart"), {
             headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
@@ -108,8 +101,7 @@ class Purchase extends Component {
         }).then((res) => {
             const cart = Array.isArray(res.data) ? res.data : [];
             this.setState({ cart });
-        }).catch((error) => {
-            console.error("Error loading cart:", error);
+        }).catch(() => {
             this.setState({ cart: [] });
         });
     }
@@ -156,10 +148,7 @@ class Purchase extends Component {
 
         // Sync with backend
         axios
-            .post("/admin/purchase-cart", { product_id: product.id })
-            .then((res) => {
-                console.log("Added to cart:", res.data);
-            })
+            .post(apiUrl("/admin/purchase-cart"), { product_id: product.id })
             .catch((err) => {
                 Swal.fire("Error!", err.response?.data?.message || "Failed to add product", "error");
             });
@@ -177,10 +166,7 @@ class Purchase extends Component {
         if (!qty) return;
 
         axios
-            .post("/admin/purchase-cart/change-qty", { product_id, quantity: qty })
-            .then((res) => {
-                console.log("Quantity updated");
-            })
+            .post(apiUrl("/admin/purchase-cart/change-qty"), { product_id, quantity: qty })
             .catch((err) => {
                 Swal.fire("Error!", err.response?.data?.message || "Failed to update quantity", "error");
             });
@@ -198,10 +184,7 @@ class Purchase extends Component {
         if (!price) return;
 
         axios
-            .post("/admin/purchase-cart/change-price", { product_id, purchase_price: price })
-            .then((res) => {
-                console.log("Price updated");
-            })
+            .post(apiUrl("/admin/purchase-cart/change-price"), { product_id, purchase_price: price })
             .catch((err) => {
                 Swal.fire("Error!", err.response?.data?.message || "Failed to update price", "error");
             });
@@ -214,7 +197,7 @@ class Purchase extends Component {
 
     handleClickDelete(product_id) {
         axios
-            .post("/admin/purchase-cart/delete", { product_id, _method: "DELETE" })
+            .post(apiUrl("/admin/purchase-cart/delete"), { product_id, _method: "DELETE" })
             .then((res) => {
                 const cart = this.state.cart.filter((c) => c.id !== product_id);
                 this.setState({ cart });
@@ -225,7 +208,7 @@ class Purchase extends Component {
     }
 
     handleEmptyCart() {
-        axios.post("/admin/purchase-cart/empty", { _method: "DELETE" }).then((res) => {
+        axios.post(apiUrl("/admin/purchase-cart/empty"), { _method: "DELETE" }).then((res) => {
             this.setState({ cart: [] });
         }).catch((err) => {
             Swal.fire("Error!", err.response?.data?.message || "Failed to empty cart", "error");
@@ -306,7 +289,7 @@ class Purchase extends Component {
             showLoaderOnConfirm: true,
             preConfirm: () => {
                 return axios
-                    .post("/admin/purchases", {
+                    .post(apiUrl("/admin/purchases"), {
                         supplier_id,
                         purchase_date,
                         total_amount,

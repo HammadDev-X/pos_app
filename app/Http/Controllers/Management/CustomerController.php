@@ -9,23 +9,44 @@ use App\Models\Customer;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Storage;
 
 class CustomerController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index(): Response|View
+    public function index(Request $request): Response|View
     {
-        if (request()->wantsJson()) {
+        $search = trim((string) $request->input('search'));
+
+        $query = Customer::query()
+            ->when($search !== '', function ($query) use ($search): void {
+                $query->where(function ($query) use ($search): void {
+                    $query->where('customer_code', 'like', "%{$search}%")
+                        ->orWhere('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%")
+                        ->orWhere('address', 'like', "%{$search}%");
+                });
+            });
+
+        if ($request->wantsJson()) {
             return response(
-                Customer::all()
+                $query->latest()->get()
             );
         }
-        $customers = Customer::latest()->paginate(10);
+
+        $customers = $query->latest()->paginate(10)->withQueryString();
+        $customers->load(['orders.items', 'orders.payments']);
+        $customers->getCollection()->each(function (Customer $customer): void {
+            $orderBalance = $customer->orders->sum(fn (object $order): float => max($order->remainingBalance(), 0));
+            $customer->setAttribute('total_pending_balance', (float) $customer->pending_amount + $orderBalance);
+        });
+
         return view('customers.index')->with('customers', $customers);
     }
 
@@ -45,11 +66,8 @@ class CustomerController extends Controller
     public function store(CustomerStoreRequest $request)
     {
         $customerData = $request->validated();
+        $customerData = $this->normalizeCustomerData($customerData);
         $customerData['user_id'] = $request->user()->id;
-
-        if ($request->hasFile('avatar')) {
-            $customerData['avatar'] = $request->file('avatar')->store('customers', 'public');
-        }
 
         Customer::create($customerData);
 
@@ -93,13 +111,7 @@ class CustomerController extends Controller
     public function update(CustomerUpdateRequest $request, Customer $customer)
     {
         $customerData = $request->validated();
-
-        if ($request->hasFile('avatar')) {
-            if ($customer->avatar) {
-                Storage::disk('public')->delete($customer->avatar);
-            }
-            $customerData['avatar'] = $request->file('avatar')->store('customers', 'public');
-        }
+        $customerData = $this->normalizeCustomerData($customerData);
 
         $customer->update($customerData);
 
@@ -109,14 +121,19 @@ class CustomerController extends Controller
 
     public function destroy(Customer $customer): JsonResponse
     {
-        if ($customer->avatar) {
-            Storage::disk('public')->delete($customer->avatar);
-        }
-
         $customer->delete();
 
         return response()->json([
             'success' => true
         ]);
+    }
+
+    private function normalizeCustomerData(array $customerData): array
+    {
+        if (array_key_exists('phone', $customerData) && filled($customerData['phone'])) {
+            $customerData['phone'] = '+92' . preg_replace('/\D+/', '', (string) $customerData['phone']);
+        }
+
+        return $customerData;
     }
 }

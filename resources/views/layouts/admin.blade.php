@@ -14,7 +14,8 @@
     <script>
         window.APP = <?php echo json_encode([
                             'currency_symbol' => config('settings.currency_symbol'),
-                            'warning_quantity' => (int) config('settings.warning_quantity', 10)
+                            'warning_quantity' => (int) config('settings.warning_quantity', 10),
+                            'base_url' => url('/'),
                         ]) ?>
     </script>
 </head>

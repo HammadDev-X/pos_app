@@ -10,11 +10,52 @@
     @php
         $businessName = 'Musa Jan Frozen Foods';
         $customerMobile = $order->customer?->phone ?: 'N/A';
+        $whatsappPhone = preg_replace('/\D+/', '', (string) $order->customer?->phone);
         $gross = $order->grossTotal();
         $returned = $order->returnedAmount();
         $total = $order->total();
         $received = $order->receivedAmount();
         $balance = max($total - $received, 0);
+        $receiptPdfPath = \Illuminate\Support\Facades\URL::signedRoute('orders.receipt-pdf', $order, null, false);
+        $receiptPdfUrl = rtrim(config('app.receipt_public_url'), '/') . $receiptPdfPath;
+        $paymentTotals = $order->payments
+            ->groupBy(fn ($payment) => $payment->method ?? 'cash')
+            ->map(fn ($payments): float => round((float) $payments->sum('amount'), 2));
+        $paymentMethods = collect(\App\Models\Payment::METHOD_LABELS)
+            ->map(fn (string $label, string $method): array => [
+                'label' => $label,
+                'amount' => (float) ($paymentTotals[$method] ?? 0),
+                'used' => (float) ($paymentTotals[$method] ?? 0) > 0,
+            ])
+            ->filter(fn (array $payment): bool => $payment['used']);
+        $itemLines = $order->items
+            ->map(function ($item): string {
+                $name = $item->product?->name ?? $item->custom_item_name ?? 'Product removed';
+                $currency = config('settings.currency_symbol');
+
+                return "- {$name}\n  Qty: {$item->quantity} | Rate: {$currency} " . number_format($item->unitPrice(), 2) . " | Discount: {$currency} " . number_format($item->discountAmount(), 2) . " | Total: {$currency} " . number_format($item->subtotal(), 2);
+            })
+            ->implode("\n");
+        $paymentLines = $paymentMethods
+            ->map(fn (array $payment): string => "- {$payment['label']}: " . config('settings.currency_symbol') . ' ' . number_format($payment['amount'], 2))
+            ->implode("\n");
+        $whatsappMessage = rawurlencode(
+            "Assalam o Alaikum {$order->getCustomerName()}\n\n" .
+            "{$businessName}\n" .
+            "Sales Invoice #{$order->id}\n" .
+            "Date & Time: {$order->created_at->format('M d, Y h:i A')}\n" .
+            "Customer: {$order->getCustomerName()}\n" .
+            "Mobile: {$customerMobile}\n" .
+            "Cashier: " . optional($order->user)->name . "\n\n" .
+            "Items:\n{$itemLines}\n\n" .
+            "Subtotal: " . config('settings.currency_symbol') . ' ' . number_format($gross, 2) . "\n" .
+            ($returned > 0 ? "Returned: -" . config('settings.currency_symbol') . ' ' . number_format($returned, 2) . "\n" : '') .
+            "Grand Total: " . config('settings.currency_symbol') . ' ' . number_format($total, 2) . "\n" .
+            "Paid Amount: " . config('settings.currency_symbol') . ' ' . number_format($received, 2) . "\n" .
+            "Remaining Balance: " . config('settings.currency_symbol') . ' ' . number_format($balance, 2) . "\n\n" .
+            "Payment Methods:\n" . ($paymentLines ?: 'No payment recorded.') . "\n\n" .
+            config('settings.receipt_footer', 'Thank you for shopping with Musa Jan Frozen Foods.')
+        );
     @endphp
 
     <main class="receipt">
@@ -90,18 +131,37 @@
         </section>
 
         <section class="receipt-payments">
-            <h2>Payments</h2>
-            @foreach($order->payments as $payment)
+            <h2>Payment Methods</h2>
+            @forelse($paymentMethods as $payment)
                 <div>
-                    <span>{{ ucfirst(str_replace('_', ' ', $payment->method ?? 'cash')) }}</span>
-                    <strong>{{ config('settings.currency_symbol') }} {{ $payment->formattedAmount() }}</strong>
+                    <span>
+                        {{ $payment['label'] }}
+                        <small class="receipt-payment-status is-used">
+                            Used
+                        </small>
+                    </span>
+                    <strong>{{ config('settings.currency_symbol') }} {{ number_format($payment['amount'], 2) }}</strong>
                 </div>
-            @endforeach
+            @empty
+                <p class="text-muted mb-0">No payment recorded.</p>
+            @endforelse
         </section>
 
         <footer class="receipt-footer">
             <p>{{ config('settings.receipt_footer', 'Thank you for shopping with Musa Jan Frozen Foods.') }}</p>
-            <button type="button" class="btn btn-primary" onclick="window.print()">Print</button>
+            <div class="receipt-actions">
+                <button type="button" class="btn btn-primary" onclick="window.print()">Print</button>
+                <a href="{{ $receiptPdfUrl }}" target="_blank" class="btn btn-default">
+                    <i class="fas fa-file-pdf mr-1"></i>
+                    Open PDF
+                </a>
+                @if($whatsappPhone)
+                    <a href="https://wa.me/{{ $whatsappPhone }}?text={{ $whatsappMessage }}" target="_blank" class="btn btn-success">
+                        <i class="fab fa-whatsapp mr-1"></i>
+                        Send Details to WhatsApp
+                    </a>
+                @endif
+            </div>
         </footer>
     </main>
 </body>

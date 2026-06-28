@@ -225,7 +225,20 @@ test('account payments count toward paid amount and remaining balance', function
     $this->get(route('orders.index'))
         ->assertOk()
         ->assertSee('13.00')
-        ->assertSee('0.50');
+        ->assertSee('0.50')
+        ->assertSee('data-payments=', false);
+
+    $this->get(route('orders.show', $order))
+        ->assertOk()
+        ->assertSee('Payment Methods')
+        ->assertSee('Cash')
+        ->assertSee('Account')
+        ->assertSee('Card')
+        ->assertSee('Used')
+        ->assertSee('Not used')
+        ->assertSee('10.00')
+        ->assertSee('3.00')
+        ->assertSee('0.00');
 });
 
 test('business and product analytics use the same net sales and gross profit formula', function () {

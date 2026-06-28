@@ -4,21 +4,17 @@ declare(strict_types=1);
 
 use App\Models\Customer;
 use App\Models\User;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
     $this->user = User::factory()->create();
     $this->actingAs($this->user);
-
-    Storage::fake('public');
 
     $this->validCustomerData = [
         'customer_code' => 'MANUAL-001',
         'first_name' => 'John',
         'last_name' => 'Doe',
         'email' => 'john@example.com',
-        'phone' => '+1234567890',
+        'phone' => '3001234567',
         'address' => '123 Main St, City',
         'pending_amount' => '0',
     ];
@@ -72,6 +68,35 @@ describe('Customers Index', function () {
             ->assertJsonCount(15)
             ->assertOk();
     });
+
+    test('customers can be searched by name code email phone or address', function () {
+        Customer::factory()->create([
+            'customer_code' => 'VIP-001',
+            'first_name' => 'Ayesha',
+            'last_name' => 'Khan',
+            'email' => 'ayesha@example.com',
+            'phone' => '03001234567',
+            'address' => 'Market Road',
+        ]);
+        Customer::factory()->create([
+            'customer_code' => 'REG-002',
+            'first_name' => 'Bilal',
+            'last_name' => 'Ahmed',
+            'email' => 'bilal@example.com',
+            'phone' => '03111234567',
+            'address' => 'Garden Town',
+        ]);
+
+        $this->get(route('customers.index', ['search' => 'Ayesha']))
+            ->assertOk()
+            ->assertSee('Ayesha')
+            ->assertDontSee('Bilal');
+
+        $this->getJson(route('customers.index', ['search' => 'Garden']))
+            ->assertOk()
+            ->assertJsonCount(1)
+            ->assertJsonFragment(['first_name' => 'Bilal']);
+    });
 });
 
 describe('Customer Create', function () {
@@ -102,7 +127,7 @@ describe('Customer Store', function () {
             'first_name' => 'John',
             'last_name' => 'Doe',
             'email' => 'john@example.com',
-            'phone' => '+1234567890',
+            'phone' => '+923001234567',
             'pending_amount' => '0.00',
             'user_id' => $this->user->id,
         ]);
@@ -138,24 +163,6 @@ describe('Customer Store', function () {
         $this->post(route('customers.store'), array_merge($this->validCustomerData, [
             'customer_code' => 'CUST-SPECIAL',
         ]))->assertSessionHasErrors('customer_code');
-    });
-
-    test('customer can be created with avatar', function () {
-        $avatar = UploadedFile::fake()->image('avatar.jpg');
-        $customerData = array_merge($this->validCustomerData, [
-            'avatar' => $avatar
-        ]);
-
-        $this->post(route('customers.store'), $customerData)
-            ->assertRedirect(route('customers.index'));
-
-        $customer = Customer::where('email', 'john@example.com')->first();
-
-        expect($customer->avatar)
-            ->not
-            ->toBeNull();
-
-        Storage::disk('public')->assertExists($customer->avatar);
     });
 
     test('customer can be created with only required fields', function () {
@@ -222,7 +229,7 @@ describe('Customer Update', function () {
             'first_name' => 'Updated',
             'last_name' => 'Name',
             'email' => 'updated@example.com',
-            'phone' => '+9876543210',
+            'phone' => '3217654321',
             'address' => 'New Address',
             'pending_amount' => '300.25',
         ];
@@ -238,40 +245,29 @@ describe('Customer Update', function () {
             'first_name' => 'Updated',
             'last_name' => 'Name',
             'email' => 'updated@example.com',
+            'phone' => '+923217654321',
             'pending_amount' => '300.25',
         ]);
     });
 
-    test('customer can be updated with new avatar', function () {
-        $customer = Customer::factory()->create();
-        $newAvatar = UploadedFile::fake()->image('new-avatar.jpg');
+    test('customer phone must be 10 digits after pakistan country code', function () {
+        $this->post(route('customers.store'), array_merge($this->validCustomerData, [
+            'phone' => '300123456',
+        ]))->assertSessionHasErrors('phone');
 
-        $updateData = array_merge($this->validCustomerData, ['avatar' => $newAvatar]);
+        $this->post(route('customers.store'), array_merge($this->validCustomerData, [
+            'customer_code' => 'PHONE-OK',
+            'email' => 'phone-ok@example.com',
+            'phone' => '+923001234567',
+        ]))->assertRedirect(route('customers.index'));
 
-        $this->put(route('customers.update', $customer), $updateData);
-
-        $customer->refresh();
-
-        expect($customer->avatar)->not->toBeNull();
-        Storage::disk('public')->assertExists($customer->avatar);
+        $this->assertDatabaseHas('customers', [
+            'customer_code' => 'PHONE-OK',
+            'phone' => '+923001234567',
+        ]);
     });
 
-    test('old avatar is deleted when updating with new avatar', function () {
-        $customer = Customer::factory()->create();
-        $oldAvatarPath = UploadedFile::fake()->image('old.jpg')->store('customers', 'public');
-        $customer->update(['avatar' => $oldAvatarPath]);
-
-        $newAvatar = UploadedFile::fake()->image('new.jpg');
-
-        $updateData = array_merge($this->validCustomerData, ['avatar' => $newAvatar]);
-
-        $this->put(route('customers.update', $customer), $updateData);
-
-        Storage::disk('public')->assertMissing($oldAvatarPath);
-    });
-
-
-    test('update works without avatar field', function () {
+    test('update works with customer fields', function () {
         $customer = Customer::factory()->create([
             'first_name' => 'Original'
         ]);
@@ -317,16 +313,6 @@ describe('Customer Destroy', function () {
         $this->assertDatabaseMissing('customers', [
             'id' => $customer->id
         ]);
-    });
-
-    test('customer avatar is deleted when customer is deleted', function () {
-        $customer = Customer::factory()->create();
-        $avatarPath = UploadedFile::fake()->image('avatar.jpg')->store('customers', 'public');
-        $customer->update(['avatar' => $avatarPath]);
-
-        $this->deleteJson(route('customers.destroy', $customer));
-
-        Storage::disk('public')->assertMissing($avatarPath);
     });
 
     test('guests cannot delete customer',function (){

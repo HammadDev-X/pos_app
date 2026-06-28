@@ -18,13 +18,10 @@
     <div class="col-md-4">
         <div class="card">
             <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <img src="{{ $customer->avatar_url }}" alt="{{ $customer->full_name }}" class="rounded mr-3" width="72" height="72">
-                    <div>
-                        <h4 class="mb-1">{{ $customer->full_name }}</h4>
-                        <p class="mb-0"><span class="badge badge-info">{{ $customer->customer_code }}</span></p>
-                        <p class="mb-0 text-muted">{{ $customer->phone ?: 'No mobile number' }}</p>
-                    </div>
+                <div>
+                    <h4 class="mb-1">{{ $customer->full_name }}</h4>
+                    <p class="mb-0"><span class="badge badge-info">{{ $customer->customer_code }}</span></p>
+                    <p class="mb-0 text-muted">{{ $customer->phone ?: 'No mobile number' }}</p>
                 </div>
                 <hr>
                 <p class="mb-1"><strong>Opening Pending:</strong> {{ $currency }} {{ number_format($openingBalance, 2) }}</p>

@@ -22,6 +22,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn(): Redirector|RedirectResponse => redirect('/admin'));
+Route::get('/receipts/orders/{order}/pdf', [OrderController::class, 'pdf'])
+    ->name('orders.receipt-pdf')
+    ->middleware('signed:relative');
 
 Auth::routes();
 

@@ -57,6 +57,17 @@
                             'discount' => $item->discountAmount(),
                             'total' => $item->subtotal(),
                         ]);
+                        $paymentTotals = $order->payments
+                            ->groupBy(fn ($payment) => $payment->method ?? 'cash')
+                            ->map(fn ($payments): float => round((float) $payments->sum('amount'), 2));
+                        $invoicePayments = collect(\App\Models\Payment::METHOD_LABELS)
+                            ->map(fn (string $label, string $method): array => [
+                                'method' => $method,
+                                'label' => $label,
+                                'amount' => (float) ($paymentTotals[$method] ?? 0),
+                                'used' => (float) ($paymentTotals[$method] ?? 0) > 0,
+                            ])
+                            ->values();
                     @endphp
                     <tr>
                         <td>{{$order->id}}</td>
@@ -89,6 +100,7 @@
                                 data-received="{{ $orderReceived }}"
                                 data-balance="{{ max($orderRemaining, 0) }}"
                                 data-items='@json($invoiceItems, JSON_HEX_APOS)'
+                                data-payments='@json($invoicePayments, JSON_HEX_APOS)'
                                 data-created-at="{{ $order->created_at }}">
                                 <ion-icon size="small" name="eye"></ion-icon>
                             </button>
@@ -230,6 +242,7 @@
                 var balanceAmount = button.data('balance') || Math.max(totalAmount - receivedAmount, 0);
                 var createdAt = button.data('created-at');
                 var items = button.data('items');
+                var payments = button.data('payments');
 
                 var statusBadge = '';
                 if (receivedAmount == 0) {
@@ -254,6 +267,18 @@
                     });
                 } else {
                     itemsHTML = '<tr><td colspan="6" class="text-center">No items found</td></tr>';
+                }
+
+                var paymentsHTML = '';
+                if (payments && Array.isArray(payments) && payments.length > 0) {
+                    payments.forEach(function(payment) {
+                        var used = Boolean(payment.used);
+                        paymentsHTML += '<tr>' +
+                            '<td>' + escapeHtml(payment.label || payment.method || 'Payment') + '</td>' +
+                            '<td class="text-right">' + currencySymbol + ' ' + parseFloat(payment.amount || 0).toFixed(2) + '</td>' +
+                            '<td class="text-right"><span class="badge badge-' + (used ? 'success' : 'secondary') + '">' + (used ? 'Used' : 'Not used') + '</span></td>' +
+                            '</tr>';
+                    });
                 }
 
                 var modalBody = $('#modalInvoice').find('.modal-body');
@@ -306,6 +331,14 @@
                     '</tr>' +
                     '</tfoot>' +
                     '</table>' +
+                    '</div>' +
+                    '<div class="mt-3">' +
+                    '<h5>Payment Methods</h5>' +
+                    '<div class="table-responsive">' +
+                    '<table class="table table-sm">' +
+                    '<tbody>' + paymentsHTML + '</tbody>' +
+                    '</table>' +
+                    '</div>' +
                     '</div>' +
                     '<p class="text-center mb-0">' + escapeHtml(receiptFooter) + '</p>' +
                     '</div>' +

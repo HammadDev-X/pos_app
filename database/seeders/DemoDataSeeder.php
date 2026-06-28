@@ -65,7 +65,7 @@ class DemoDataSeeder extends Seeder
                 ['first_name' => 'Omar', 'last_name' => 'Ali', 'email' => 'omar.ali@example.com', 'phone' => '555-0104'],
             ])->map(fn (array $customer): Customer => Customer::updateOrCreate(
                 ['email' => $customer['email']],
-                $customer + ['address' => 'Demo address', 'avatar' => null, 'user_id' => $user->id]
+                $customer + ['address' => 'Demo address', 'user_id' => $user->id]
             ));
 
             $suppliers = collect([
