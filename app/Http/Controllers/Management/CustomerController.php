@@ -23,6 +23,9 @@ class CustomerController extends Controller
         $search = trim((string) $request->input('search'));
 
         $query = Customer::query()
+            ->when($request->user()?->isSalesman(), function ($query): void {
+                $query->where('is_visible_to_salesman', true);
+            })
             ->when($search !== '', function ($query) use ($search): void {
                 $query->where(function ($query) use ($search): void {
                     $query->where('customer_code', 'like', "%{$search}%")
@@ -117,6 +120,16 @@ class CustomerController extends Controller
 
         return redirect()->route('customers.index')
             ->with('success', __('customer.success_updating'));
+    }
+
+    public function toggleSalesmanVisibility(Customer $customer): RedirectResponse
+    {
+        $customer->update([
+            'is_visible_to_salesman' => ! $customer->is_visible_to_salesman,
+        ]);
+
+        return redirect()->route('customers.index', request()->query())
+            ->with('success', __('Customer salesman visibility updated.'));
     }
 
     public function destroy(Customer $customer): JsonResponse

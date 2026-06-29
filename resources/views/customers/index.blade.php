@@ -3,9 +3,11 @@
 @section('title', __('customer.Customer_List'))
 @section('content-header', __('customer.Customer_List'))
 @section('content-actions')
-<a href="{{route('customers.create')}}" class="btn btn-primary">
-    <i class="fas fa-user-plus mr-1"></i>{{ __('customer.Add_Customer') }}
-</a>
+@if(auth()->user()?->isManager())
+    <a href="{{route('customers.create')}}" class="btn btn-primary">
+        <i class="fas fa-user-plus mr-1"></i>{{ __('customer.Add_Customer') }}
+    </a>
+@endif
 @endsection
 @section('css')
 <link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
@@ -14,7 +16,7 @@
 <div class="card">
     <div class="card-body">
         @php
-            $canDeleteCustomers = auth()->user()?->isManager();
+            $canManageCustomers = auth()->user()?->isManager();
         @endphp
         <form action="{{ route('customers.index') }}" method="GET" class="mb-3">
             <div class="input-group">
@@ -37,6 +39,9 @@
                     <th>{{ __('customer.Phone') }}</th>
                     <th>{{ __('customer.Address') }}</th>
                     <th>Previous Amount</th>
+                    @if($canManageCustomers)
+                        <th>Salesman</th>
+                    @endif
                     <th>{{ __('common.Created_At') }}</th>
                     <th>{{ __('customer.Actions') }}</th>
                 </tr>
@@ -61,11 +66,27 @@
                             {{ config('settings.currency_symbol') }} {{ number_format((float) $customer->total_pending_balance, 2) }}
                         </strong>
                     </td>
+                    @if($canManageCustomers)
+                    <td>
+                        <form action="{{ route('customers.toggle-salesman-visibility', $customer) }}" method="POST" class="d-inline">
+                            @csrf
+                            @method('PATCH')
+                            <button
+                                type="submit"
+                                class="btn btn-sm {{ $customer->is_visible_to_salesman ? 'btn-success' : 'btn-secondary' }}"
+                                title="{{ $customer->is_visible_to_salesman ? 'Hide from salesman' : 'Show to salesman' }}"
+                            >
+                                <i class="fas {{ $customer->is_visible_to_salesman ? 'fa-toggle-on' : 'fa-toggle-off' }}"></i>
+                                {{ $customer->is_visible_to_salesman ? 'Allowed' : 'Hidden' }}
+                            </button>
+                        </form>
+                    </td>
+                    @endif
                     <td class="text-nowrap">{{$customer->created_at?->format('Y-m-d')}}</td>
                     <td class="customer-actions">
                         <a href="{{ route('customers.show', $customer) }}" class="btn btn-info btn-sm" title="Ledger"><i class="fas fa-book"></i></a>
-                        <a href="{{ route('customers.edit', $customer) }}" class="btn btn-primary btn-sm" title="Edit"><i class="fas fa-edit"></i></a>
-                        @if($canDeleteCustomers)
+                        @if($canManageCustomers)
+                            <a href="{{ route('customers.edit', $customer) }}" class="btn btn-primary btn-sm" title="Edit"><i class="fas fa-edit"></i></a>
                             <button class="btn btn-danger btn-sm btn-delete" data-url="{{route('customers.destroy', $customer)}}" title="Delete"><i class="fas fa-trash"></i></button>
                         @endif
                     </td>
@@ -73,7 +94,7 @@
                 @endforeach
                 @if($customers->isEmpty())
                 <tr>
-                    <td colspan="8" class="text-center text-muted py-4">No customers found.</td>
+                    <td colspan="{{ $canManageCustomers ? 9 : 8 }}" class="text-center text-muted py-4">No customers found.</td>
                 </tr>
                 @endif
             </tbody>

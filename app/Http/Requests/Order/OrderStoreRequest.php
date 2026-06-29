@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Order;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class OrderStoreRequest extends FormRequest
 {
@@ -22,8 +23,14 @@ class OrderStoreRequest extends FormRequest
 
     public function rules(): array
     {
+        $customerRule = Rule::exists('customers', 'id');
+
+        if ($this->user()?->isSalesman()) {
+            $customerRule->where('is_visible_to_salesman', true);
+        }
+
         return [
-            'customer_id' => ['nullable', 'integer', 'exists:customers,id'],
+            'customer_id' => ['nullable', 'integer', $customerRule],
             'amount' => ['required_without:payments', 'numeric', 'min:0', 'decimal:0,2'],
             'due_date' => ['nullable', 'date'],
             'payment_method' => ['required', 'string', 'in:cash,card,bank_transfer,mobile_money,jazzcash,easypaisa,account,credit'],

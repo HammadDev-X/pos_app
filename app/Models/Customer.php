@@ -17,6 +17,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $phone
  * @property string|null $address
  * @property string|float $pending_amount
+ * @property bool $is_visible_to_salesman
  * @property int $user_id
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -49,11 +50,13 @@ class Customer extends Model
         'phone',
         'address',
         'pending_amount',
+        'is_visible_to_salesman',
         'user_id',
     ];
 
     protected $casts = [
         'pending_amount' => 'decimal:2',
+        'is_visible_to_salesman' => 'boolean',
     ];
 
     /**

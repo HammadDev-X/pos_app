@@ -69,6 +69,18 @@ describe('Customers Index', function () {
             ->assertOk();
     });
 
+    test('salesman only receives customers allowed by manager', function () {
+        $salesman = User::factory()->salesman()->create();
+        $visibleCustomer = Customer::factory()->create(['is_visible_to_salesman' => true]);
+        $hiddenCustomer = Customer::factory()->create(['is_visible_to_salesman' => false]);
+
+        $this->actingAs($salesman)
+            ->getJson(route('customers.index'))
+            ->assertOk()
+            ->assertJsonFragment(['id' => $visibleCustomer->id])
+            ->assertJsonMissing(['id' => $hiddenCustomer->id]);
+    });
+
     test('customers can be searched by name code email phone or address', function () {
         Customer::factory()->create([
             'customer_code' => 'VIP-001',
@@ -105,6 +117,12 @@ describe('Customer Create', function () {
             ->assertViewIs('customers.create')
             ->assertSee('Create Customer')
             ->assertOk();
+    });
+
+    test('salesman cannot view create form', function () {
+        $this->actingAs(User::factory()->salesman()->create())
+            ->get(route('customers.create'))
+            ->assertForbidden();
     });
 
     test('guests cannot be create view', function () {
@@ -196,6 +214,12 @@ describe('Customer Store', function () {
             'email' => 'pending@example.com',
             'pending_amount' => '1250.50',
         ]);
+    });
+
+    test('salesman cannot create a customer', function () {
+        $this->actingAs(User::factory()->salesman()->create())
+            ->post(route('customers.store'), $this->validCustomerData)
+            ->assertForbidden();
     });
 });
 
@@ -320,5 +344,18 @@ describe('Customer Destroy', function () {
         $customer = Customer::factory()->create();
         $this->deleteJson(route('customers.destroy', $customer))
             ->assertUnauthorized();
+    });
+});
+
+describe('Customer Salesman Visibility', function () {
+    test('manager can toggle customer visibility for salesman', function () {
+        $manager = User::factory()->manager()->create();
+        $customer = Customer::factory()->create(['is_visible_to_salesman' => true]);
+
+        $this->actingAs($manager)
+            ->patch(route('customers.toggle-salesman-visibility', $customer))
+            ->assertRedirect(route('customers.index'));
+
+        expect($customer->refresh()->is_visible_to_salesman)->toBeFalse();
     });
 });

@@ -173,6 +173,21 @@ describe('Order Validation', function () {
             ->assertJsonValidationErrors('customer_id');
     });
 
+    test('salesman cannot use a hidden customer on an order', function () {
+        $salesman = User::factory()->salesman()->create();
+        $customer = Customer::factory()->create(['is_visible_to_salesman' => false]);
+        $product = Product::factory()->create(['quantity' => 10]);
+        $salesman->cart()->attach($product->id, ['quantity' => 1]);
+
+        $this->actingAs($salesman)
+            ->postJson(route('orders.store'), [
+                'customer_id' => $customer->id,
+                'amount' => 100,
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('customer_id');
+    });
+
     test('amount is required and must be numeric', function () {
         $product = Product::factory()->create(['quantity' => 10]);
         $this->user->cart()->attach($product->id, ['quantity' => 1]);

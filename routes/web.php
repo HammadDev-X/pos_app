@@ -46,7 +46,9 @@ Route::prefix('admin')->middleware(['auth', 'locale'])->group(function (): void 
     Route::get('/reports/business', [BusinessReportController::class, 'index'])->name('reports.business')->middleware('role:admin,manager');
     Route::get('/reports/product-analytics', [ProductAnalyticsController::class, 'index'])->name('reports.product-analytics')->middleware('role:admin,manager');
     Route::get('/reports/product-analytics/data', [ProductAnalyticsController::class, 'data'])->name('reports.product-analytics.data')->middleware('role:admin,manager');
-    Route::resource('customers', CustomerController::class)->except(['destroy']);
+    Route::resource('customers', CustomerController::class)->only(['index', 'show']);
+    Route::resource('customers', CustomerController::class)->except(['index', 'show', 'destroy'])->middleware('role:admin,manager');
+    Route::patch('/customers/{customer}/salesman-visibility', [CustomerController::class, 'toggleSalesmanVisibility'])->name('customers.toggle-salesman-visibility')->middleware('role:admin,manager');
     Route::delete('/customers/{customer}', [CustomerController::class, 'destroy'])->name('customers.destroy')->middleware('role:admin,manager');
     Route::get('/orders/{order}/return', [OrderController::class, 'returnForm'])->name('orders.return');
     Route::post('/orders/{order}/return', [OrderController::class, 'processReturn'])->name('orders.return.store');
