@@ -13,14 +13,11 @@ const currentDateInput = () => {
 
 const paymentLabels = {
     cash: "Cash",
-    card: "Card",
-    bank_transfer: "Bank transfer",
-    mobile_money: "Mobile money",
     jazzcash: "JazzCash",
     easypaisa: "EasyPaisa",
-    account: "Account",
     cash_account: "Cash + Account",
     loan: "Loan",
+    cash_loan: "Cash + Loan",
 };
 
 const apiUrl = (path) => `${window.APP?.base_url || ""}${path}`;
@@ -46,6 +43,7 @@ class Cart extends Component {
             openItemPrice: "",
             openItemQuantity: "1",
             customer_id: "",
+            customerBalancePayment: "0.00",
             payment_method: "cash",
             due_date: currentDateInput(),
             translations: {},
@@ -67,6 +65,7 @@ class Cart extends Component {
         this.selectCustomer = this.selectCustomer.bind(this);
         this.clearCustomer = this.clearCustomer.bind(this);
         this.setPaymentMethod = this.setPaymentMethod.bind(this);
+        this.setCustomerBalancePayment = this.setCustomerBalancePayment.bind(this);
         this.setItemDiscount = this.setItemDiscount.bind(this);
         this.setDueDate = this.setDueDate.bind(this);
         this.handleClickSubmit = this.handleClickSubmit.bind(this);
@@ -355,6 +354,7 @@ class Cart extends Component {
             customerSearch,
             customerSearchOpen: true,
             customer_id: exactSelectedCustomer ? selectedCustomer.id : "",
+            customerBalancePayment: exactSelectedCustomer ? this.state.customerBalancePayment : "0.00",
         });
 
         clearTimeout(this.customerSearchTimer);
@@ -371,16 +371,27 @@ class Cart extends Component {
             customer_id: customer.id,
             customerSearch: this.customerLabel(customer),
             customerSearchOpen: false,
+            customerBalancePayment: money(customer.total_pending_balance),
         });
     }
 
     clearCustomer() {
-        this.setState({ customer_id: "", customerSearch: "", customerSearchOpen: false });
+        this.setState({ customer_id: "", customerSearch: "", customerSearchOpen: false, customerBalancePayment: "0.00" });
         this.loadCustomers();
     }
 
     setPaymentMethod(event) {
         this.setState({ payment_method: event.target.value });
+    }
+
+    setCustomerBalancePayment(event) {
+        const selectedCustomer = this.state.customers.find((customer) => String(customer.id) === String(this.state.customer_id));
+        const maxPending = Number(selectedCustomer?.total_pending_balance || 0);
+        const amount = Math.max(Number(event.target.value || 0), 0);
+
+        this.setState({
+            customerBalancePayment: event.target.value === "" ? "" : String(Math.min(amount, maxPending)),
+        });
     }
 
     setItemDiscount(product_id, discount) {
@@ -402,6 +413,7 @@ class Cart extends Component {
                 amount,
                 payment_method: paymentMethod,
                 payments,
+                customer_balance_payment: this.state.customer_id ? money(this.state.customerBalancePayment) : "0.00",
                 item_discounts: this.state.cart.reduce((discounts, item) => ({
                     ...discounts,
                     [item.id]: item.pivot.discount || 0,
@@ -421,6 +433,7 @@ class Cart extends Component {
                 this.setState({
                     openItems: [],
                     customer_id: "",
+                    customerBalancePayment: "0.00",
                     payment_method: "cash",
                     due_date: currentDateInput(),
                     lookup: "",
@@ -440,7 +453,11 @@ class Cart extends Component {
             return this.showCashAccountCheckout(total);
         }
 
-        if ((selectedMethod === "account" || selectedMethod === "loan") && !this.state.customer_id) {
+        if (selectedMethod === "cash_loan") {
+            return this.showCashLoanCheckout(total);
+        }
+
+        if (selectedMethod === "loan" && !this.state.customer_id) {
             Swal.fire("Customer required", `Select a customer before using ${selectedLabel}.`, "error");
             return;
         }
@@ -567,6 +584,90 @@ class Cart extends Component {
         }).then((result) => this.showOrderComplete(result));
     }
 
+    showCashLoanCheckout(total) {
+        const totalText = money(total);
+        Swal.fire({
+            title: "Cash + Loan",
+            html: `
+                <div class="checkout-payment-summary">
+                    <span>${this.state.translations["amount_due"] || "Amount due"}</span>
+                    <strong>${window.APP.currency_symbol} ${totalText}</strong>
+                </div>
+                <label class="checkout-payment-field">
+                    <span>Cash received</span>
+                    <input id="checkout-primary-amount" class="swal2-input" type="number" min="0" max="${totalText}" step="0.01" value="0.00">
+                </label>
+                <label class="checkout-payment-field">
+                    <span>Loan amount</span>
+                    <input id="checkout-loan-amount" class="swal2-input" type="number" value="${totalText}" readonly>
+                </label>
+                <small id="checkout-payment-help" class="checkout-payment-help">The unpaid amount will remain pending on the selected customer.</small>
+            `,
+            focusConfirm: false,
+            cancelButtonText: this.state.translations["cancel_pay"],
+            showCancelButton: true,
+            confirmButtonText: this.state.translations["confirm_pay"],
+            showLoaderOnConfirm: true,
+            didOpen: () => {
+                const cashInput = document.getElementById("checkout-primary-amount");
+                const loanInput = document.getElementById("checkout-loan-amount");
+                const helpText = document.getElementById("checkout-payment-help");
+                const clampCashAmount = () => {
+                    const cashAmount = Math.max(Number(cashInput.value || 0), 0);
+                    const allowedAmount = Math.max(total, 0);
+
+                    if (cashAmount > allowedAmount) {
+                        cashInput.value = money(allowedAmount);
+                        loanInput.value = "0.00";
+                        helpText.textContent = `Maximum cash is ${window.APP.currency_symbol} ${money(allowedAmount)}.`;
+                        return;
+                    }
+
+                    loanInput.value = money(Math.max(total - cashAmount, 0));
+                    helpText.textContent = "The unpaid amount will remain pending on the selected customer.";
+                };
+
+                cashInput.addEventListener("input", clampCashAmount);
+            },
+            preConfirm: () => {
+                const primaryAmount = Number(document.getElementById("checkout-primary-amount").value || 0);
+
+                if (!this.state.customer_id) {
+                    Swal.showValidationMessage("Select a customer before using Cash + Loan.");
+                    return false;
+                }
+
+                if (primaryAmount <= 0) {
+                    Swal.showValidationMessage("Enter the cash received amount.");
+                    return false;
+                }
+
+                if (primaryAmount > total + 0.00001) {
+                    Swal.showValidationMessage("Cash cannot be greater than the sale total.");
+                    return false;
+                }
+
+                if (primaryAmount >= total) {
+                    Swal.showValidationMessage("Use Cash when the full sale is paid.");
+                    return false;
+                }
+
+                const payments = [
+                    primaryAmount > 0 ? { method: "cash", amount: primaryAmount.toFixed(2) } : null,
+                ].filter(Boolean);
+
+                return this.createOrder({
+                    amount: primaryAmount.toFixed(2),
+                    paymentMethod: "cash_loan",
+                    payments,
+                }).catch((err) => {
+                    Swal.showValidationMessage(err.response?.data?.message || "Unable to create order");
+                });
+            },
+            allowOutsideClick: () => !Swal.isLoading(),
+        }).then((result) => this.showOrderComplete(result));
+    }
+
     showOrderComplete(result) {
         if (!result.value) {
             return;
@@ -600,6 +701,7 @@ class Cart extends Component {
             lookup = "",
             translations = {},
             payment_method = "cash",
+            customerBalancePayment = "0.00",
             due_date = "",
             selectedCategoryId = "",
         } = this.state;
@@ -607,6 +709,7 @@ class Cart extends Component {
         const hasSaleItems = cart.length > 0 || openItems.length > 0;
         const customerTerm = customerSearch.trim().toLowerCase();
         const selectedCustomer = customers.find((cus) => String(cus.id) === String(this.state.customer_id));
+        const selectedCustomerPending = Number(selectedCustomer?.total_pending_balance || 0);
         const visibleCustomers = customerTerm
             ? customers.filter((cus) => this.customerSearchText(cus).includes(customerTerm)).slice(0, 8)
             : customers.slice(0, 8);
@@ -735,16 +838,34 @@ class Cart extends Component {
                                 ) : null}
                             </div>
 
+                            {selectedCustomer ? (
+                                <div className="customer-balance-box mb-3">
+                                    <div>
+                                        <span>Customer pending</span>
+                                        <strong>{window.APP.currency_symbol} {money(selectedCustomerPending)}</strong>
+                                    </div>
+                                    <label>
+                                        <span>Receive previous balance</span>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            max={money(selectedCustomerPending)}
+                                            step="0.01"
+                                            className="form-control form-control-sm"
+                                            value={customerBalancePayment}
+                                            onChange={this.setCustomerBalancePayment}
+                                        />
+                                    </label>
+                                </div>
+                            ) : null}
+
                             <select className="form-control mb-3" value={payment_method} onChange={this.setPaymentMethod}>
                                 <option value="cash">{translations["cash"] || "Cash"}</option>
-                                <option value="card">{translations["card"] || "Card"}</option>
-                                <option value="bank_transfer">{translations["bank_transfer"] || "Bank transfer"}</option>
-                                <option value="mobile_money">{translations["mobile_money"] || "Mobile money"}</option>
                                 <option value="jazzcash">{translations["jazzcash"] || "JazzCash"}</option>
                                 <option value="easypaisa">{translations["easypaisa"] || "EasyPaisa"}</option>
-                                <option value="account">{translations["account"] || "Account"}</option>
                                 <option value="cash_account">{translations["cash_account"] || "Cash + Account"}</option>
                                 <option value="loan">{translations["loan"] || "Loan"}</option>
+                                <option value="cash_loan">{translations["cash_loan"] || "Cash + Loan"}</option>
                             </select>
 
                             <div className="d-flex mb-3">

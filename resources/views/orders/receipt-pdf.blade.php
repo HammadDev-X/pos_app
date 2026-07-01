@@ -31,6 +31,14 @@
     $total = $order->total();
     $received = $order->receivedAmount();
     $balance = max($total - $received, 0);
+    $customerBalance = $order->customer?->totalPendingBalance() ?? $balance;
+    $balancePayment = \App\Models\AuditLog::query()
+        ->where('action', 'customer.balance_payment_on_sale')
+        ->where('auditable_type', \App\Models\Order::class)
+        ->where('auditable_id', $order->id)
+        ->latest()
+        ->first()?->properties ?? [];
+    $previousBalancePaid = (float) ($balancePayment['amount'] ?? 0);
     $paymentTotals = $order->payments
         ->groupBy(fn ($payment) => $payment->method ?? 'cash')
         ->map(fn ($payments): float => round((float) $payments->sum('amount'), 2));
@@ -85,6 +93,10 @@
         <tr><td><strong>Grand Total</strong></td><td class="right"><strong>{{ config('settings.currency_symbol') }} {{ number_format($total, 2) }}</strong></td></tr>
         <tr><td>Paid</td><td class="right">{{ config('settings.currency_symbol') }} {{ number_format($received, 2) }}</td></tr>
         <tr><td>Balance</td><td class="right">{{ config('settings.currency_symbol') }} {{ number_format($balance, 2) }}</td></tr>
+        @if($previousBalancePaid > 0)
+            <tr><td>Previous Balance Paid</td><td class="right">{{ config('settings.currency_symbol') }} {{ number_format($previousBalancePaid, 2) }}</td></tr>
+        @endif
+        <tr><td>Customer Balance</td><td class="right">{{ config('settings.currency_symbol') }} {{ number_format($customerBalance, 2) }}</td></tr>
     </table>
 
     <table class="payments">

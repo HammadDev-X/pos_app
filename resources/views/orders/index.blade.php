@@ -49,6 +49,14 @@
                         $orderTotal = $order->total();
                         $orderReceived = $order->receivedAmount();
                         $orderRemaining = $orderTotal - $orderReceived;
+                        $customerRemainingBalance = $order->customer?->totalPendingBalance() ?? max($orderRemaining, 0);
+                        $balancePaymentLog = \App\Models\AuditLog::query()
+                            ->where('action', 'customer.balance_payment_on_sale')
+                            ->where('auditable_type', \App\Models\Order::class)
+                            ->where('auditable_id', $order->id)
+                            ->latest()
+                            ->first();
+                        $previousBalancePaid = (float) ($balancePaymentLog?->properties['amount'] ?? 0);
                         $customerMobile = $order->customer?->phone ?: 'N/A';
                         $invoiceItems = $order->items->map(fn ($item): array => [
                             'name' => $item->product?->name ?? $item->custom_item_name ?? 'Product removed',
@@ -99,6 +107,8 @@
                                 data-total="{{ $orderTotal }}"
                                 data-received="{{ $orderReceived }}"
                                 data-balance="{{ max($orderRemaining, 0) }}"
+                                data-customer-balance="{{ $customerRemainingBalance }}"
+                                data-previous-balance-paid="{{ $previousBalancePaid }}"
                                 data-items='@json($invoiceItems, JSON_HEX_APOS)'
                                 data-payments='@json($invoicePayments, JSON_HEX_APOS)'
                                 data-created-at="{{ $order->created_at }}">
@@ -161,12 +171,8 @@
                                 <label for="partialPaymentMethod">Payment Method</label>
                                 <select class="form-control" id="partialPaymentMethod" name="payment_method" required>
                                     <option value="cash">Cash</option>
-                                    <option value="card">Card</option>
-                                    <option value="bank_transfer">Bank transfer</option>
-                                    <option value="mobile_money">Mobile money</option>
                                     <option value="jazzcash">JazzCash</option>
                                     <option value="easypaisa">EasyPaisa</option>
-                                    <option value="account">Account</option>
                                 </select>
                             </div>
                             <div class="form-group">
@@ -258,6 +264,8 @@
                 var totalAmount = button.data('total');
                 var receivedAmount = button.data('received');
                 var balanceAmount = button.data('balance') || Math.max(totalAmount - receivedAmount, 0);
+                var customerBalance = button.data('customer-balance') || balanceAmount;
+                var previousBalancePaid = parseFloat(button.data('previous-balance-paid') || 0);
                 var createdAt = button.data('created-at');
                 var items = button.data('items');
                 var payments = button.data('payments');
@@ -346,6 +354,14 @@
                     '<tr>' +
                     '<th colspan="5" class="text-right">Remaining Balance</th>' +
                     '<th>' + currencySymbol + ' ' + parseFloat(balanceAmount).toFixed(2) + '</th>' +
+                    '</tr>' +
+                    (previousBalancePaid > 0 ? '<tr>' +
+                    '<th colspan="5" class="text-right">Previous Balance Paid</th>' +
+                    '<th>' + currencySymbol + ' ' + previousBalancePaid.toFixed(2) + '</th>' +
+                    '</tr>' : '') +
+                    '<tr>' +
+                    '<th colspan="5" class="text-right">Customer Remaining Balance</th>' +
+                    '<th>' + currencySymbol + ' ' + parseFloat(customerBalance).toFixed(2) + '</th>' +
                     '</tr>' +
                     '</tfoot>' +
                     '</table>' +

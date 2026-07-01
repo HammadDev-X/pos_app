@@ -34,13 +34,9 @@ class Payment extends Model
 
     public const METHOD_LABELS = [
         'cash' => 'Cash',
-        'card' => 'Card',
-        'bank_transfer' => 'Bank transfer',
-        'mobile_money' => 'Mobile money',
         'jazzcash' => 'JazzCash',
         'easypaisa' => 'EasyPaisa',
         'account' => 'Account',
-        'credit' => 'Credit',
         'loan' => 'Loan',
     ];
 

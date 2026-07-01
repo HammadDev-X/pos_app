@@ -84,12 +84,8 @@
                             <label for="openingPaymentMethod">Payment Method</label>
                             <select class="form-control" id="openingPaymentMethod" name="payment_method" required>
                                 <option value="cash">Cash</option>
-                                <option value="card">Card</option>
-                                <option value="bank_transfer">Bank transfer</option>
-                                <option value="mobile_money">Mobile money</option>
                                 <option value="jazzcash">JazzCash</option>
                                 <option value="easypaisa">EasyPaisa</option>
-                                <option value="account">Account</option>
                             </select>
                         </div>
                         <div class="form-group">

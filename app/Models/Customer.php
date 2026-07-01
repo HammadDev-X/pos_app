@@ -72,6 +72,21 @@ class Customer extends Model
         return $this->hasMany(Order::class);
     }
 
+    public function totalPendingBalance(): float
+    {
+        $orders = $this->relationLoaded('orders')
+            ? $this->orders
+            : $this->orders()->with(['items', 'payments'])->get();
+
+        return round(
+            (float) $this->pending_amount +
+            (float) $orders
+                ->where('status', '!=', 'cancelled')
+                ->sum(fn (Order $order): float => max($order->remainingBalance(), 0)),
+            2
+        );
+    }
+
     /**
      * Scope for customers by specific user.
      */

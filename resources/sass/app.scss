@@ -357,10 +357,15 @@ a:hover {
     color: #fff;
 }
 
-.btn-danger,
-.btn-outline-danger:hover {
+.btn-danger {
     background: var(--ui-danger) !important;
     border-color: var(--ui-danger) !important;
+}
+
+.btn-outline-danger:hover {
+    background: #fff2f0 !important;
+    border-color: rgba(217, 77, 63, 0.38) !important;
+    color: #8f1116 !important;
 }
 
 .btn-default,
@@ -957,6 +962,42 @@ label {
         font-weight: 700;
         padding: 10px;
         text-align: center;
+    }
+
+    .customer-balance-box {
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(220, 53, 69, 0.18);
+        border-radius: 8px;
+        padding: 0.75rem;
+    }
+
+    .customer-balance-box > div {
+        align-items: center;
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.55rem;
+    }
+
+    .customer-balance-box span {
+        color: var(--ui-muted);
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .customer-balance-box strong {
+        color: var(--ui-text);
+        font-size: 1rem;
+    }
+
+    .customer-balance-box label {
+        display: block;
+        margin: 0;
+    }
+
+    .customer-balance-box label span {
+        display: block;
+        margin-bottom: 0.35rem;
     }
 
     .open-item-form {
@@ -1985,10 +2026,15 @@ body::before {
     border-color: var(--theme-green-dark) !important;
 }
 
-.btn-danger,
-.btn-outline-danger:hover {
+.btn-danger {
     background: linear-gradient(135deg, var(--theme-red), var(--theme-red-dark)) !important;
     border-color: var(--theme-red) !important;
+}
+
+.btn-outline-danger:hover {
+    background: var(--theme-red-soft) !important;
+    border-color: rgba(224, 24, 34, 0.38) !important;
+    color: var(--theme-red-dark) !important;
 }
 
 .btn-default,

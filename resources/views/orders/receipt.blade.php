@@ -16,6 +16,14 @@
         $total = $order->total();
         $received = $order->receivedAmount();
         $balance = max($total - $received, 0);
+        $customerBalance = $order->customer?->totalPendingBalance() ?? $balance;
+        $balancePayment = \App\Models\AuditLog::query()
+            ->where('action', 'customer.balance_payment_on_sale')
+            ->where('auditable_type', \App\Models\Order::class)
+            ->where('auditable_id', $order->id)
+            ->latest()
+            ->first()?->properties ?? [];
+        $previousBalancePaid = (float) ($balancePayment['amount'] ?? 0);
         $receiptPdfPath = \Illuminate\Support\Facades\URL::signedRoute('orders.receipt-pdf', $order, null, false);
         $receiptPdfUrl = rtrim(config('app.receipt_public_url'), '/') . $receiptPdfPath;
         $paymentTotals = $order->payments
@@ -53,6 +61,8 @@
             "Grand Total: " . config('settings.currency_symbol') . ' ' . number_format($total, 2) . "\n" .
             "Paid Amount: " . config('settings.currency_symbol') . ' ' . number_format($received, 2) . "\n" .
             "Remaining Balance: " . config('settings.currency_symbol') . ' ' . number_format($balance, 2) . "\n\n" .
+            ($previousBalancePaid > 0 ? "Previous Balance Paid: " . config('settings.currency_symbol') . ' ' . number_format($previousBalancePaid, 2) . "\n" : '') .
+            "Customer Remaining Balance: " . config('settings.currency_symbol') . ' ' . number_format($customerBalance, 2) . "\n\n" .
             "Payment Methods:\n" . ($paymentLines ?: 'No payment recorded.') . "\n\n" .
             config('settings.receipt_footer', 'Thank you for shopping with Musa Jan Frozen Foods.')
         );
@@ -128,6 +138,10 @@
             <div><span>Grand Total</span><strong>{{ config('settings.currency_symbol') }} {{ number_format($total, 2) }}</strong></div>
             <div><span>Paid Amount</span><strong>{{ config('settings.currency_symbol') }} {{ number_format($received, 2) }}</strong></div>
             <div><span>Remaining Balance</span><strong>{{ config('settings.currency_symbol') }} {{ number_format($balance, 2) }}</strong></div>
+            @if($previousBalancePaid > 0)
+                <div><span>Previous Balance Paid</span><strong>{{ config('settings.currency_symbol') }} {{ number_format($previousBalancePaid, 2) }}</strong></div>
+            @endif
+            <div><span>Customer Remaining Balance</span><strong>{{ config('settings.currency_symbol') }} {{ number_format($customerBalance, 2) }}</strong></div>
         </section>
 
         <section class="receipt-payments">

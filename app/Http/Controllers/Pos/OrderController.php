@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Order\OrderStoreRequest;
 use App\Http\Requests\Order\PartialPaymentRequest;
 use App\Models\AuditLog;
+use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
@@ -19,7 +20,7 @@ class OrderController extends Controller
     public function index(Request $request): \Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View
     {
         $orders = Order::query()
-            ->with(['items.product', 'payments', 'customer'])
+            ->with(['items.product', 'payments', 'customer.orders.items', 'customer.orders.payments'])
             ->when($request->input('start_date'), function ($query, $startDate): void {
                 $query->where('created_at', '>=', $startDate);
             })
@@ -74,6 +75,7 @@ class OrderController extends Controller
                 $order->load('items');
                 $orderTotal = $order->total();
                 $isLoanSale = $request->input('payment_method') === 'loan';
+                $isCashLoanSale = $request->input('payment_method') === 'cash_loan';
                 $paymentTotal = round($payments->sum('amount'), 2);
                 $accountTotal = round($payments
                     ->whereIn('method', Payment::ACCOUNT_METHODS)
@@ -81,6 +83,10 @@ class OrderController extends Controller
 
                 if ($isLoanSale && !$order->customer_id) {
                     throw new \Exception('Select a customer before creating a loan sale.');
+                }
+
+                if ($isCashLoanSale && !$order->customer_id) {
+                    throw new \Exception('Select a customer before using Cash + Loan.');
                 }
 
                 if ($accountTotal > 0 && !$order->customer_id) {
@@ -104,12 +110,14 @@ class OrderController extends Controller
                 }
 
                 $order->load('payments');
+                $balancePayment = $this->applyCustomerBalancePayment($request, $order);
 
                 AuditLog::record('order.created', $order, [
                     'total' => $orderTotal,
                     'paid' => $order->receivedAmount(),
                     'account' => $order->accountAmount(),
                     'payment_methods' => $payments->pluck('method')->unique()->values()->all(),
+                    'customer_balance_payment' => $balancePayment,
                 ]);
 
                 return $order;
@@ -130,14 +138,14 @@ class OrderController extends Controller
 
     public function show(Order $order): \Illuminate\Contracts\View\View
     {
-        $order->load(['customer', 'items.product', 'payments.user']);
+        $order->load(['customer.orders.items', 'customer.orders.payments', 'items.product', 'payments.user']);
 
         return view('orders.receipt', ['order' => $order]);
     }
 
     public function pdf(Order $order)
     {
-        $order->load(['customer', 'items.product', 'payments.user']);
+        $order->load(['customer.orders.items', 'customer.orders.payments', 'items.product', 'payments.user']);
 
         $pdf = app('dompdf.wrapper');
         $pdf->loadView('orders.receipt-pdf', ['order' => $order]);
@@ -225,10 +233,146 @@ class OrderController extends Controller
             return $payments;
         }
 
+        $fallbackMethod = in_array($request->input('payment_method', 'cash'), ['cash_account', 'cash_loan'], true)
+            ? 'cash'
+            : $request->input('payment_method', 'cash');
+
         return collect([[
-            'method' => $request->input('payment_method', 'cash'),
+            'method' => $fallbackMethod,
             'amount' => round((float) $request->input('amount', 0), 2),
         ]]);
+    }
+
+    private function applyCustomerBalancePayment(OrderStoreRequest $request, Order $newOrder): array
+    {
+        $amount = round((float) $request->input('customer_balance_payment', 0), 2);
+
+        if ($amount <= 0) {
+            return [
+                'amount' => 0,
+                'opening_amount' => 0,
+                'invoice_amount' => 0,
+                'remaining_customer_balance' => $this->customerPendingBalance($newOrder->customer_id),
+            ];
+        }
+
+        if (!$newOrder->customer_id) {
+            throw new \Exception('Select a customer before receiving previous balance.');
+        }
+
+        $customer = Customer::whereKey($newOrder->customer_id)->lockForUpdate()->firstOrFail();
+        $currentPending = round((float) $customer->pending_amount, 2);
+        $orders = $customer->orders()
+            ->whereKeyNot($newOrder->id)
+            ->where('status', '!=', 'cancelled')
+            ->oldest()
+            ->lockForUpdate()
+            ->get();
+        $orders->load(['items', 'payments']);
+        $orderPending = round((float) $orders->sum(fn (Order $order): float => max($order->remainingBalance(), 0)), 2);
+        $totalPending = round($currentPending + $orderPending, 2);
+
+        if ($totalPending <= 0) {
+            throw new \Exception('This customer has no pending amount to receive.');
+        }
+
+        if ($amount > $totalPending + 0.00001) {
+            throw new \Exception('Previous balance payment cannot be greater than the customer pending amount.');
+        }
+
+        $remainingAmount = $amount;
+        $openingApplied = min($remainingAmount, $currentPending);
+        $balancePaymentMethod = in_array($request->input('payment_method'), ['cash', 'jazzcash', 'easypaisa'], true)
+            ? $request->input('payment_method')
+            : 'cash';
+
+        if ($openingApplied > 0) {
+            $customer->update([
+                'pending_amount' => max(round($currentPending - $openingApplied, 2), 0),
+            ]);
+            $remainingAmount = round($remainingAmount - $openingApplied, 2);
+        }
+
+        $invoiceAllocations = [];
+
+        foreach ($orders as $order) {
+            if ($remainingAmount <= 0) {
+                break;
+            }
+
+            $orderRemaining = max(round($order->remainingBalance(), 2), 0);
+
+            if ($orderRemaining <= 0) {
+                continue;
+            }
+
+            $invoiceApplied = min($remainingAmount, $orderRemaining);
+            $order->payments()->create([
+                'amount' => $invoiceApplied,
+                'method' => $balancePaymentMethod,
+                'user_id' => $request->user()->id,
+            ]);
+
+            AuditLog::record('payment.received', $order, [
+                'amount' => $invoiceApplied,
+                'payment_method' => $balancePaymentMethod,
+                'source' => 'pos_customer_balance_payment',
+                'linked_order_id' => $newOrder->id,
+            ]);
+
+            $invoiceAllocations[] = [
+                'order_id' => $order->id,
+                'amount' => $invoiceApplied,
+            ];
+            $remainingAmount = round($remainingAmount - $invoiceApplied, 2);
+        }
+
+        $invoiceAmount = round($amount - $openingApplied, 2);
+        $remainingCustomerBalance = $this->customerPendingBalance($customer->id);
+
+        AuditLog::record('customer.opening_payment', $customer, [
+            'amount' => $openingApplied,
+            'total_amount' => $amount,
+            'invoice_amount' => $invoiceAmount,
+            'invoice_allocations' => $invoiceAllocations,
+            'payment_method' => $balancePaymentMethod,
+            'source' => 'pos_checkout',
+            'linked_order_id' => $newOrder->id,
+            'previous_pending_amount' => $currentPending,
+            'remaining_pending_amount' => (float) $customer->fresh()->pending_amount,
+        ]);
+
+        AuditLog::record('customer.balance_payment_on_sale', $newOrder, [
+            'customer_id' => $customer->id,
+            'amount' => $amount,
+            'opening_amount' => $openingApplied,
+            'invoice_amount' => $invoiceAmount,
+            'invoice_allocations' => $invoiceAllocations,
+            'payment_method' => $balancePaymentMethod,
+            'remaining_customer_balance' => $remainingCustomerBalance,
+        ]);
+
+        return [
+            'amount' => $amount,
+            'opening_amount' => $openingApplied,
+            'invoice_amount' => $invoiceAmount,
+            'remaining_customer_balance' => $remainingCustomerBalance,
+        ];
+    }
+
+    private function customerPendingBalance(?int $customerId): float
+    {
+        if (!$customerId) {
+            return 0.0;
+        }
+
+        $customer = Customer::with(['orders.items', 'orders.payments'])->find($customerId);
+
+        if (!$customer) {
+            return 0.0;
+        }
+
+        return $customer->totalPendingBalance();
     }
 
     private function createCustomOrderItem(Order $order, array $item): void

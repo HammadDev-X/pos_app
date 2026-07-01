@@ -42,17 +42,19 @@ class CustomerController extends Controller
             });
 
         if ($request->wantsJson() && ! $request->boolean('table')) {
-            return response(
-                $query->latest()->get()
-            );
+            $customers = $query->with(['orders.items', 'orders.payments'])->latest()->get();
+            $customers->each(function (Customer $customer): void {
+                $customer->setAttribute('total_pending_balance', $customer->totalPendingBalance());
+            });
+
+            return response($customers);
         }
 
         $canManageCustomers = $request->user()?->isManager();
         $customers = $query->latest()->paginate(10)->withQueryString();
         $customers->load(['orders.items', 'orders.payments']);
         $customers->getCollection()->each(function (Customer $customer): void {
-            $orderBalance = $customer->orders->sum(fn (object $order): float => max($order->remainingBalance(), 0));
-            $customer->setAttribute('total_pending_balance', (float) $customer->pending_amount + $orderBalance);
+            $customer->setAttribute('total_pending_balance', $customer->totalPendingBalance());
         });
 
         if ($request->boolean('table')) {
@@ -165,7 +167,7 @@ class CustomerController extends Controller
     {
         $validated = $request->validate([
             'amount' => ['required', 'numeric', 'min:0.01', 'decimal:0,2'],
-            'payment_method' => ['required', 'string', Rule::in(['cash', 'card', 'bank_transfer', 'mobile_money', 'jazzcash', 'easypaisa', 'account', 'credit'])],
+            'payment_method' => ['required', 'string', Rule::in(['cash', 'jazzcash', 'easypaisa'])],
             'note' => ['nullable', 'string', 'max:255'],
         ]);
 
