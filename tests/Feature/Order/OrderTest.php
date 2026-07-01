@@ -177,6 +177,44 @@ describe('Order Store', function () {
             ->and($order->receivedAmount())->toBe(0.0)
             ->and($order->remainingBalance())->toBe(250.0);
     });
+
+    test('pos checkout customer balance payment clears previous customer dues', function () {
+        $customer = Customer::factory()->create(['pending_amount' => 100]);
+        $oldProduct = Product::factory()->create();
+        $oldOrder = Order::factory()->create([
+            'customer_id' => $customer->id,
+            'user_id' => $this->user->id,
+        ]);
+        $oldOrder->items()->create([
+            'product_id' => $oldProduct->id,
+            'price' => 250,
+            'quantity' => 1,
+        ]);
+        $oldOrder->payments()->create([
+            'amount' => 50,
+            'method' => 'cash',
+            'user_id' => $this->user->id,
+        ]);
+        $newProduct = Product::factory()->create(['price' => 40, 'quantity' => 10]);
+        $this->user->cart()->attach($newProduct->id, ['quantity' => 1]);
+
+        expect($customer->fresh()->totalPendingBalance())->toBe(300.0);
+
+        $this->postJson(route('orders.store'), [
+            'customer_id' => $customer->id,
+            'amount' => 40,
+            'payment_method' => 'cash',
+            'customer_balance_payment' => 300,
+        ])->assertCreated();
+
+        $oldOrder->refresh()->load(['items', 'payments']);
+        $newOrder = Order::latest()->with(['items', 'payments'])->first();
+
+        expect((float) $customer->refresh()->pending_amount)->toBe(0.0)
+            ->and($oldOrder->remainingBalance())->toBe(0.0)
+            ->and($newOrder->remainingBalance())->toBe(0.0)
+            ->and($customer->totalPendingBalance())->toBe(0.0);
+    });
 });
 
 describe('Order Validation', function () {
@@ -278,6 +316,38 @@ describe('Partial Payment', function () {
 
         $response->assertRedirect(route('orders.index'))
             ->assertSessionHasErrors();
+    });
+
+    test('order list payment updates customer total pending balance', function () {
+        $customer = Customer::factory()->create(['pending_amount' => 25]);
+        $order = Order::factory()->create([
+            'customer_id' => $customer->id,
+            'user_id' => $this->user->id,
+        ]);
+        $product = Product::factory()->create();
+        $order->items()->create([
+            'price' => 100,
+            'quantity' => 1,
+            'product_id' => $product->id,
+        ]);
+        $order->payments()->create([
+            'amount' => 20,
+            'method' => 'cash',
+            'user_id' => $this->user->id,
+        ]);
+
+        expect($customer->fresh()->totalPendingBalance())->toBe(105.0);
+
+        $this->post(route('orders.partial-payment'), [
+            'order_id' => $order->id,
+            'amount' => 80,
+            'payment_method' => 'cash',
+        ])->assertRedirect(route('orders.index'));
+
+        $order->refresh()->load(['items', 'payments']);
+
+        expect($order->remainingBalance())->toBe(0.0)
+            ->and($customer->fresh()->totalPendingBalance())->toBe(25.0);
     });
 });
 

@@ -190,10 +190,14 @@ class Order extends Model
     public function paymentTotal(): float
     {
         if ($this->relationLoaded('payments')) {
-            return round((float) $this->payments->sum(fn (Payment $payment): float => (float) $payment->amount), 2);
+            return round((float) $this->payments
+                ->reject(fn (Payment $payment): bool => $payment->isAccountTender())
+                ->sum(fn (Payment $payment): float => (float) $payment->amount), 2);
         }
 
-        return round((float) $this->payments()->sum('amount'), 2);
+        return round((float) $this->payments()
+            ->whereNotIn('method', Payment::ACCOUNT_METHODS)
+            ->sum('amount'), 2);
     }
 
     /**

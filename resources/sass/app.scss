@@ -205,6 +205,16 @@ a:hover {
     width: 36px;
 }
 
+.brand-link .brand-initials {
+    align-items: center;
+    color: var(--ui-sidebar);
+    display: inline-flex;
+    font-size: 0.78rem;
+    font-weight: 900;
+    justify-content: center;
+    line-height: 1;
+}
+
 .brand-link .brand-text {
     color: #f8fffc;
     font-weight: 800 !important;

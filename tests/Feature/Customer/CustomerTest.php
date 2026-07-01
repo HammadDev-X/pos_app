@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use App\Models\Customer;
 use App\Models\AuditLog;
+use App\Models\Order;
+use App\Models\Product;
 use App\Models\User;
 
 beforeEach(function () {
@@ -397,5 +399,37 @@ describe('Customer Previous Balance Payment', function () {
         ])->assertSessionHasErrors();
 
         expect((float) $customer->refresh()->pending_amount)->toBe(50.0);
+    });
+
+    test('customer balance payment clears opening and invoice dues together', function () {
+        $customer = Customer::factory()->create(['pending_amount' => 100]);
+        $product = Product::factory()->create();
+        $order = Order::factory()->create([
+            'customer_id' => $customer->id,
+            'user_id' => $this->user->id,
+        ]);
+        $order->items()->create([
+            'product_id' => $product->id,
+            'price' => 250,
+            'quantity' => 1,
+        ]);
+        $order->payments()->create([
+            'amount' => 50,
+            'method' => 'cash',
+            'user_id' => $this->user->id,
+        ]);
+
+        expect($customer->fresh()->totalPendingBalance())->toBe(300.0);
+
+        $this->post(route('customers.opening-payment', $customer), [
+            'amount' => '300.00',
+            'payment_method' => 'cash',
+        ])->assertRedirect();
+
+        $order->refresh()->load(['items', 'payments']);
+
+        expect((float) $customer->refresh()->pending_amount)->toBe(0.0)
+            ->and($order->remainingBalance())->toBe(0.0)
+            ->and($customer->totalPendingBalance())->toBe(0.0);
     });
 });

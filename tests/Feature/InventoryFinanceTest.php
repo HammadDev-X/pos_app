@@ -190,7 +190,7 @@ test('dashboard renders when monthly sales are zero', function () {
         ->assertSee('Monthly Sales Calendar');
 });
 
-test('account payments count toward paid amount and remaining balance', function () {
+test('account payments stay as customer receivable until collected', function () {
     $product = Product::factory()->create([
         'name' => 'Arabica Coffee Beans',
         'price' => 18.50,
@@ -219,13 +219,14 @@ test('account payments count toward paid amount and remaining balance', function
     $order->load(['items', 'payments']);
 
     expect($order->total())->toBe(13.5)
-        ->and($order->receivedAmount())->toBe(13.0)
-        ->and($order->remainingBalance())->toBe(0.5);
+        ->and($order->receivedAmount())->toBe(10.0)
+        ->and($order->accountAmount())->toBe(3.0)
+        ->and($order->remainingBalance())->toBe(3.5);
 
     $this->get(route('orders.index'))
         ->assertOk()
-        ->assertSee('13.00')
-        ->assertSee('0.50')
+        ->assertSee('10.00')
+        ->assertSee('3.50')
         ->assertSee('data-payments=', false);
 
     $this->get(route('orders.show', $order))
@@ -233,12 +234,10 @@ test('account payments count toward paid amount and remaining balance', function
         ->assertSee('Payment Methods')
         ->assertSee('Cash')
         ->assertSee('Account')
-        ->assertSee('Card')
         ->assertSee('Used')
-        ->assertSee('Not used')
         ->assertSee('10.00')
         ->assertSee('3.00')
-        ->assertSee('0.00');
+        ->assertSee('3.50');
 });
 
 test('business and product analytics use the same net sales and gross profit formula', function () {
