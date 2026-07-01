@@ -342,8 +342,9 @@ a:hover {
 
 .btn-primary:hover,
 .btn-success:hover {
-    background: var(--ui-primary-dark) !important;
-    border-color: var(--ui-primary-dark) !important;
+    background: #e7f8ed !important;
+    border-color: rgba(8, 166, 79, 0.35) !important;
+    color: var(--ui-primary-dark) !important;
 }
 
 .btn-outline-primary {
@@ -352,9 +353,9 @@ a:hover {
 }
 
 .btn-outline-primary:hover {
-    background: var(--ui-primary);
-    border-color: var(--ui-primary);
-    color: #fff;
+    background: #e7f8ed;
+    border-color: rgba(8, 166, 79, 0.35);
+    color: var(--ui-primary-dark);
 }
 
 .btn-danger {
@@ -2022,8 +2023,9 @@ body::before {
 
 .btn-primary:hover,
 .btn-success:hover {
-    background: linear-gradient(135deg, var(--theme-green-dark), #045a31) !important;
-    border-color: var(--theme-green-dark) !important;
+    background: var(--theme-green-soft) !important;
+    border-color: rgba(8, 166, 79, 0.35) !important;
+    color: var(--theme-green-dark) !important;
 }
 
 .btn-danger {
