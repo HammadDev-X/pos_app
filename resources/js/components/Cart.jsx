@@ -371,7 +371,7 @@ class Cart extends Component {
             customer_id: customer.id,
             customerSearch: this.customerLabel(customer),
             customerSearchOpen: false,
-            customerBalancePayment: money(customer.total_pending_balance),
+            customerBalancePayment: "0.00",
         });
     }
 
