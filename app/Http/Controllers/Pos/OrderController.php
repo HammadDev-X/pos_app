@@ -73,16 +73,21 @@ class OrderController extends Controller
                 $payments = $this->paymentsFromRequest($request);
                 $order->load('items');
                 $orderTotal = $order->total();
+                $isLoanSale = $request->input('payment_method') === 'loan';
                 $paymentTotal = round($payments->sum('amount'), 2);
                 $accountTotal = round($payments
                     ->whereIn('method', Payment::ACCOUNT_METHODS)
                     ->sum('amount'), 2);
 
+                if ($isLoanSale && !$order->customer_id) {
+                    throw new \Exception('Select a customer before creating a loan sale.');
+                }
+
                 if ($accountTotal > 0 && !$order->customer_id) {
                     throw new \Exception('Select a customer before putting any amount on account.');
                 }
 
-                if ($paymentTotal <= 0) {
+                if (!$isLoanSale && $paymentTotal <= 0) {
                     throw new \Exception(__('order.validation.amount_required'));
                 }
 
@@ -143,30 +148,46 @@ class OrderController extends Controller
 
     public function partialPayment(PartialPaymentRequest $request)
     {
-        $order = Order::findOrFail($request->input('order_id'));
-        $remainingAmount = $order->total() - $order->receivedAmount();
+        $receivedAmount = 0.0;
 
-        if ($request->input('amount') > $remainingAmount) {
+        try {
+            DB::transaction(function () use ($request, &$receivedAmount): void {
+                $order = Order::whereKey($request->input('order_id'))
+                    ->lockForUpdate()
+                    ->firstOrFail();
+                $order->load(['items', 'payments']);
+                $remainingAmount = max(round($order->total() - $order->receivedAmount(), 2), 0);
+                $amount = round((float) $request->amount, 2);
+
+                if ($amount > $remainingAmount + 0.00001) {
+                    throw new \Exception(__('order.amount_exceeds_balance'));
+                }
+
+                if ($remainingAmount <= 0) {
+                    throw new \Exception('This order is already fully paid.');
+                }
+
+                $receivedAmount = min($amount, $remainingAmount);
+
+                $order->payments()->create([
+                    'amount' => $receivedAmount,
+                    'method' => $request->payment_method,
+                    'user_id' => auth()->id(),
+                ]);
+
+                AuditLog::record('payment.received', $order, [
+                    'amount' => $receivedAmount,
+                    'payment_method' => $request->payment_method,
+                ]);
+            });
+        } catch (\Exception $e) {
             return redirect()->route('orders.index')
-                ->withErrors(__('order.amount_exceeds_balance'));
+                ->withErrors($e->getMessage());
         }
-
-        DB::transaction(function () use ($order, $request): void {
-            $order->payments()->create([
-                'amount' => $request->amount,
-                'method' => $request->payment_method,
-                'user_id' => auth()->id(),
-            ]);
-
-            AuditLog::record('payment.received', $order, [
-                'amount' => (float) $request->amount,
-                'payment_method' => $request->payment_method,
-            ]);
-        });
 
         return redirect()->route('orders.index')
             ->with('success', __('order.partial_payment_success', [
-                'amount' => config('settings.currency_symbol') . number_format($request->amount, 2)
+                'amount' => config('settings.currency_symbol') . number_format($receivedAmount, 2)
             ]));
     }
 
@@ -188,6 +209,10 @@ class OrderController extends Controller
 
     private function paymentsFromRequest(OrderStoreRequest $request): \Illuminate\Support\Collection
     {
+        if ($request->input('payment_method') === 'loan') {
+            return collect();
+        }
+
         $payments = collect($request->input('payments', []))
             ->map(fn (array $payment): array => [
                 'method' => $payment['method'] ?? 'cash',

@@ -50,6 +50,8 @@ return [
     'jazzcash'          => 'JazzCash',
     'easypaisa'         => 'EasyPaisa',
     'account'           => 'Account',
+    'cash_account'      => 'Cash + Account',
+    'loan'              => 'Loan',
     'new_sale'          => 'New Sale',
     'order_complete'    => 'Order complete',
     'print_receipt'     => 'Print Receipt',

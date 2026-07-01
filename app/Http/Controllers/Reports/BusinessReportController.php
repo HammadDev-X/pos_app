@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\Customer;
 use App\Models\Expense;
 use App\Models\Order;
@@ -43,6 +44,14 @@ class BusinessReportController extends Controller
             ->flatMap->payments
             ->groupBy('method')
             ->map(fn ($payments): float => (float) $payments->sum('amount'));
+        $openingPaymentLogs = AuditLog::query()
+            ->with('auditable')
+            ->where('action', 'customer.opening_payment')
+            ->whereBetween('created_at', [$dateFrom . ' 00:00:00', $dateTo . ' 23:59:59'])
+            ->latest()
+            ->get();
+        $openingRecoveryPayments = (float) $openingPaymentLogs
+            ->sum(fn (AuditLog $log): float => (float) ($log->properties['amount'] ?? 0));
         $cashSales = (float) ($paymentBreakdown->get('cash') ?? 0);
         $accountSales = (float) $paymentBreakdown
             ->reject(fn ($amount, string $method): bool => $method === 'cash')
@@ -50,7 +59,7 @@ class BusinessReportController extends Controller
         $recoveryPayments = (float) $orders
             ->flatMap->payments
             ->filter(fn ($payment): bool => $payment->order && $payment->created_at->gt($payment->order->created_at))
-            ->sum('amount');
+            ->sum('amount') + $openingRecoveryPayments;
         $creditSalesHistory = $orders
             ->filter(fn (Order $order): bool => $order->customer_id !== null && ($order->remainingBalance() > 0 || $order->receivedAmount() < $order->total()))
             ->map(fn (Order $order): array => [
@@ -73,6 +82,14 @@ class BusinessReportController extends Controller
                 'is_recovery' => $payment->created_at?->gt($order->created_at) ?? false,
             ]))
             ->filter(fn (array $row): bool => $row['is_recovery'])
+            ->concat($openingPaymentLogs->map(fn (AuditLog $log): array => [
+                'customer' => $log->auditable instanceof Customer ? $log->auditable->full_name : 'Customer removed',
+                'date' => $log->created_at?->toDateString(),
+                'amount' => (float) ($log->properties['amount'] ?? 0),
+                'method' => $log->properties['payment_method'] ?? 'cash',
+                'order_id' => 'Previous balance',
+                'is_recovery' => true,
+            ]))
             ->values();
         $recoveryAlerts = $orders
             ->filter(fn (Order $order): bool => $order->customer_id !== null && $order->remainingBalance() > 0)

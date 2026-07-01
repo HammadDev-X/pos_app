@@ -15,16 +15,21 @@
 @section('content')
 <div class="card">
     <div class="card-body">
-        @php
-            $canManageCustomers = auth()->user()?->isManager();
-        @endphp
-        <form action="{{ route('customers.index') }}" method="GET" class="mb-3">
+        <form action="{{ route('customers.index') }}" method="GET" class="mb-3" id="customerSearchForm">
             <div class="input-group">
-                <input type="text" name="search" value="{{ request('search') }}" class="form-control" placeholder="Search customers by name, code, phone, email, or address">
+                <input
+                    type="text"
+                    name="search"
+                    id="customerLiveSearch"
+                    value="{{ request('search') }}"
+                    class="form-control"
+                    placeholder="Search customers by name, code, phone, email, or address"
+                    autocomplete="off"
+                >
                 <div class="input-group-append">
                     <button class="btn btn-primary" type="submit"><i class="fas fa-search"></i> {{ __('Search') }}</button>
                     @if(request('search'))
-                        <a href="{{ route('customers.index') }}" class="btn btn-default"><i class="fas fa-redo"></i></a>
+                        <a href="{{ route('customers.index') }}" class="btn btn-default" id="customerSearchReset"><i class="fas fa-redo"></i></a>
                     @endif
                 </div>
             </div>
@@ -46,69 +51,140 @@
                     <th>{{ __('customer.Actions') }}</th>
                 </tr>
             </thead>
-            <tbody>
-                @foreach ($customers as $customer)
-                <tr class="{{ $customer->total_pending_balance > 0 ? 'customer-row-pending' : '' }}">
-                    <td>
-                        <div class="customer-identity">
-                            <div>
-                                <strong>{{$customer->full_name}}</strong>
-                                <span>ID #{{$customer->id}}</span>
-                            </div>
-                        </div>
-                    </td>
-                    <td><span class="badge badge-info">{{ $customer->customer_code }}</span></td>
-                    <td class="text-break">{{$customer->email ?: '-'}}</td>
-                    <td class="text-nowrap">{{$customer->phone ?: '-'}}</td>
-                    <td class="customer-address">{{$customer->address ?: '-'}}</td>
-                    <td class="text-nowrap">
-                        <strong class="{{ $customer->total_pending_balance > 0 ? 'text-warning' : '' }}">
-                            {{ config('settings.currency_symbol') }} {{ number_format((float) $customer->total_pending_balance, 2) }}
-                        </strong>
-                    </td>
-                    @if($canManageCustomers)
-                    <td>
-                        <form action="{{ route('customers.toggle-salesman-visibility', $customer) }}" method="POST" class="d-inline">
-                            @csrf
-                            @method('PATCH')
-                            <button
-                                type="submit"
-                                class="btn btn-sm {{ $customer->is_visible_to_salesman ? 'btn-success' : 'btn-secondary' }}"
-                                title="{{ $customer->is_visible_to_salesman ? 'Hide from salesman' : 'Show to salesman' }}"
-                            >
-                                <i class="fas {{ $customer->is_visible_to_salesman ? 'fa-toggle-on' : 'fa-toggle-off' }}"></i>
-                                {{ $customer->is_visible_to_salesman ? 'Allowed' : 'Hidden' }}
-                            </button>
-                        </form>
-                    </td>
-                    @endif
-                    <td class="text-nowrap">{{$customer->created_at?->format('Y-m-d')}}</td>
-                    <td class="customer-actions">
-                        <a href="{{ route('customers.show', $customer) }}" class="btn btn-info btn-sm" title="Ledger"><i class="fas fa-book"></i></a>
-                        @if($canManageCustomers)
-                            <a href="{{ route('customers.edit', $customer) }}" class="btn btn-primary btn-sm" title="Edit"><i class="fas fa-edit"></i></a>
-                            <button class="btn btn-danger btn-sm btn-delete" data-url="{{route('customers.destroy', $customer)}}" title="Delete"><i class="fas fa-trash"></i></button>
-                        @endif
-                    </td>
-                </tr>
-                @endforeach
-                @if($customers->isEmpty())
-                <tr>
-                    <td colspan="{{ $canManageCustomers ? 9 : 8 }}" class="text-center text-muted py-4">No customers found.</td>
-                </tr>
-                @endif
+            <tbody id="customerTableBody">
+                @include('customers._table_rows', ['customers' => $customers, 'canManageCustomers' => $canManageCustomers])
             </tbody>
         </table>
         </div>
-        {{ $customers->render() }}
+        <div id="customerPagination">
+            {{ $customers->render() }}
+        </div>
     </div>
 </div>
+
+@if($canManageCustomers)
+    <div class="modal fade" id="openingPaymentModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <form method="POST" id="openingPaymentForm">
+                    @csrf
+                    <div class="modal-header">
+                        <h5 class="modal-title">Receive Customer Balance</h5>
+                        <button type="button" class="close" data-dismiss="modal">
+                            <span>&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <strong id="openingPaymentCustomer">Customer</strong>
+                            <div class="text-muted">Total pending: <span id="openingPaymentPending"></span></div>
+                            <small class="text-muted" id="openingPaymentOpening"></small>
+                        </div>
+                        <div class="form-group">
+                            <label for="openingPaymentMethod">Payment Method</label>
+                            <select class="form-control" id="openingPaymentMethod" name="payment_method" required>
+                                <option value="cash">Cash</option>
+                                <option value="card">Card</option>
+                                <option value="bank_transfer">Bank transfer</option>
+                                <option value="mobile_money">Mobile money</option>
+                                <option value="jazzcash">JazzCash</option>
+                                <option value="easypaisa">EasyPaisa</option>
+                                <option value="account">Account</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="openingPaymentAmount">Amount Received</label>
+                            <input type="number" min="0.01" step="0.01" class="form-control" id="openingPaymentAmount" name="amount" required>
+                            <small class="form-text text-danger d-none" id="openingPaymentAmountHelp"></small>
+                        </div>
+                        <div class="form-group mb-0">
+                            <label for="openingPaymentNote">Note</label>
+                            <textarea class="form-control" id="openingPaymentNote" name="note" rows="2" maxlength="255" placeholder="Optional"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success">Receive Payment</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+@endif
 @endsection
 
 @section('js')
 <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
 <script type="module">
     $(document).ready(function() {
+        var currencySymbol = @json(config('settings.currency_symbol'));
+        var customerSearchTimer = null;
+        var customerSearchRequest = null;
+
+        function money(value) {
+            return parseFloat(value || 0).toFixed(2);
+        }
+
+        function clampMoneyInput(input, maximum, messageTarget) {
+            var amount = parseFloat(input.val() || 0);
+            var maxAmount = parseFloat(maximum || 0);
+
+            if (amount > maxAmount) {
+                input.val(money(maxAmount));
+                messageTarget.removeClass('d-none').text('Maximum allowed amount is ' + currencySymbol + ' ' + money(maxAmount) + '.');
+                return;
+            }
+
+            messageTarget.addClass('d-none').text('');
+        }
+
+        function loadCustomers(search, pageUrl) {
+            var url = pageUrl || @json(route('customers.index'));
+            var requestData = { table: 1, search: search };
+
+            if (customerSearchRequest) {
+                customerSearchRequest.abort();
+            }
+
+            customerSearchRequest = $.ajax({
+                url: url,
+                data: requestData,
+                dataType: 'json',
+                success: function(res) {
+                    $('#customerTableBody').html(res.html);
+                    $('#customerPagination').html(res.pagination);
+
+                    var cleanUrl = new URL(@json(route('customers.index')), window.location.origin);
+                    if (search) {
+                        cleanUrl.searchParams.set('search', search);
+                    }
+                    window.history.replaceState({}, '', cleanUrl.toString());
+                },
+                complete: function() {
+                    customerSearchRequest = null;
+                }
+            });
+        }
+
+        $('#customerSearchForm').on('submit', function(event) {
+            event.preventDefault();
+            loadCustomers($('#customerLiveSearch').val().trim());
+        });
+
+        $('#customerLiveSearch').on('input', function() {
+            var search = $(this).val().trim();
+
+            clearTimeout(customerSearchTimer);
+            customerSearchTimer = setTimeout(function() {
+                loadCustomers(search);
+            }, 250);
+        });
+
+        $(document).on('click', '#customerPagination a', function(event) {
+            event.preventDefault();
+            loadCustomers($('#customerLiveSearch').val().trim(), $(this).attr('href'));
+        });
+
         $(document).on('click', '.btn-delete', function() {
             var $this = $(this);
             const swalWithBootstrapButtons = Swal.mixin({
@@ -139,6 +215,25 @@
                     });
                 }
             });
+        });
+
+        $(document).on('click', '.btnReceiveOpeningPayment', function() {
+            var button = $(this);
+            var openingAmount = parseFloat(button.data('pending-amount') || 0);
+            var pendingAmount = parseFloat(button.data('total-pending') || openingAmount || 0);
+
+            $('#openingPaymentForm').attr('action', button.data('url'));
+            $('#openingPaymentCustomer').text(button.data('customer-code') + ' - ' + button.data('customer-name'));
+            $('#openingPaymentPending').text(currencySymbol + ' ' + money(pendingAmount));
+            $('#openingPaymentOpening').text('Opening balance included: ' + currencySymbol + ' ' + money(openingAmount));
+            $('#openingPaymentAmount').val(money(pendingAmount)).attr('max', money(pendingAmount));
+            $('#openingPaymentAmountHelp').addClass('d-none').text('');
+            $('#openingPaymentMethod').val('cash');
+            $('#openingPaymentNote').val('');
+        });
+
+        $(document).on('input', '#openingPaymentAmount', function() {
+            clampMoneyInput($(this), $(this).attr('max'), $('#openingPaymentAmountHelp'));
         });
     });
 </script>

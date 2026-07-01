@@ -24,7 +24,8 @@
                     <p class="mb-0 text-muted">{{ $customer->phone ?: 'No mobile number' }}</p>
                 </div>
                 <hr>
-                <p class="mb-1"><strong>Opening Pending:</strong> {{ $currency }} {{ number_format($openingBalance, 2) }}</p>
+                <p class="mb-1"><strong>Opening Pending Remaining:</strong> {{ $currency }} {{ number_format($openingBalance, 2) }}</p>
+                <p class="mb-1"><strong>Previous Balance Recovered:</strong> {{ $currency }} {{ number_format($openingRecovered, 2) }}</p>
                 <p class="mb-1"><strong>Total Sales:</strong> {{ $currency }} {{ number_format($totalSales, 2) }}</p>
                 <p class="mb-1"><strong>Paid / Recovered:</strong> {{ $currency }} {{ number_format($totalPaid, 2) }}</p>
                 <p class="mb-3"><strong>Pending Balance:</strong> {{ $currency }} {{ number_format($balance, 2) }}</p>
@@ -34,6 +35,37 @@
                         Send WhatsApp Reminder
                     </a>
                 @endif
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><h3 class="card-title">Previous Balance Payments</h3></div>
+            <div class="card-body p-0">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Method</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($openingPayments as $payment)
+                            <tr>
+                                <td>{{ $payment->created_at->format('M d, Y') }}</td>
+                                <td>{{ \App\Models\Payment::methodLabel($payment->properties['payment_method'] ?? 'cash') }}</td>
+                                <td>{{ $currency }} {{ number_format((float) ($payment->properties['amount'] ?? 0), 2) }}</td>
+                            </tr>
+                            @if(!empty($payment->properties['note']))
+                                <tr>
+                                    <td colspan="3" class="text-muted pt-0">{{ $payment->properties['note'] }}</td>
+                                </tr>
+                            @endif
+                        @empty
+                            <tr><td colspan="3" class="text-muted text-center py-4">No previous balance payments recorded.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>

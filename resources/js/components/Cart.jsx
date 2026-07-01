@@ -19,9 +19,12 @@ const paymentLabels = {
     jazzcash: "JazzCash",
     easypaisa: "EasyPaisa",
     account: "Account",
+    cash_account: "Cash + Account",
+    loan: "Loan",
 };
 
 const apiUrl = (path) => `${window.APP?.base_url || ""}${path}`;
+const money = (amount) => Number(amount || 0).toFixed(2);
 
 class Cart extends Component {
     constructor(props) {
@@ -34,6 +37,8 @@ class Cart extends Component {
             openItems: [],
             customers: [],
             customerSearch: "",
+            customerSearchOpen: false,
+            customerLoading: false,
             lookup: "",
             search: "",
             selectedCategoryId: "",
@@ -65,7 +70,11 @@ class Cart extends Component {
         this.setItemDiscount = this.setItemDiscount.bind(this);
         this.setDueDate = this.setDueDate.bind(this);
         this.handleClickSubmit = this.handleClickSubmit.bind(this);
+        this.createOrder = this.createOrder.bind(this);
         this.loadTranslations = this.loadTranslations.bind(this);
+        this.resetSaleOnOpen = this.resetSaleOnOpen.bind(this);
+        this.clearPersistedCart = this.clearPersistedCart.bind(this);
+        this.customerSearchTimer = null;
     }
 
     componentDidMount() {
@@ -74,7 +83,42 @@ class Cart extends Component {
         this.loadCategories();
         this.loadProducts();
         this.loadQuickItems();
-        this.loadCart();
+        this.resetSaleOnOpen();
+        window.addEventListener("pagehide", this.clearPersistedCart);
+    }
+
+    componentWillUnmount() {
+        window.removeEventListener("pagehide", this.clearPersistedCart);
+        clearTimeout(this.customerSearchTimer);
+    }
+
+    resetSaleOnOpen() {
+        axios
+            .post(apiUrl("/admin/cart/empty"), { _method: "DELETE" })
+            .then(() => this.setState({ cart: [], openItems: [] }))
+            .catch(() => this.loadCart());
+    }
+
+    clearPersistedCart() {
+        const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content");
+        const formData = new FormData();
+
+        formData.append("_method", "DELETE");
+        if (token) {
+            formData.append("_token", token);
+        }
+
+        if (navigator.sendBeacon) {
+            navigator.sendBeacon(apiUrl("/admin/cart/empty"), formData);
+            return;
+        }
+
+        fetch(apiUrl("/admin/cart/empty"), {
+            method: "POST",
+            body: formData,
+            credentials: "same-origin",
+            keepalive: true,
+        }).catch(() => {});
     }
 
     loadTranslations() {
@@ -84,12 +128,19 @@ class Cart extends Component {
             .catch(() => this.setState({ translations: {} }));
     }
 
-    loadCustomers() {
-        axios.get(apiUrl("/admin/customers"), {
+    loadCustomers(search = "") {
+        const params = new URLSearchParams();
+        if (search.trim()) {
+            params.set("search", search.trim());
+        }
+
+        this.setState({ customerLoading: true });
+
+        axios.get(apiUrl(`/admin/customers${params.toString() ? `?${params.toString()}` : ""}`), {
             headers: { Accept: "application/json", "Content-Type": "application/json" },
         }).then((res) => {
-            this.setState({ customers: res.data });
-        }).catch(() => this.setState({ customers: [] }));
+            this.setState({ customers: Array.isArray(res.data) ? res.data : [], customerLoading: false });
+        }).catch(() => this.setState({ customers: [], customerLoading: false }));
     }
 
     loadCategories() {
@@ -283,16 +334,31 @@ class Cart extends Component {
         return `${customer.customer_code || "No code"} - ${customer.first_name || ""} ${customer.last_name || ""}`.trim();
     }
 
+    customerSearchText(customer) {
+        return [
+            customer.customer_code,
+            customer.first_name,
+            customer.last_name,
+            customer.email,
+            customer.phone,
+            customer.address,
+            this.customerLabel(customer),
+        ].filter(Boolean).join(" ").toLowerCase();
+    }
+
     handleCustomerSearch(event) {
         const customerSearch = event.target.value;
         const selectedCustomer = this.state.customers.find((customer) => String(customer.id) === String(this.state.customer_id));
+        const exactSelectedCustomer = selectedCustomer && customerSearch === this.customerLabel(selectedCustomer);
 
         this.setState({
             customerSearch,
-            customer_id: selectedCustomer && customerSearch === this.customerLabel(selectedCustomer)
-                ? selectedCustomer.id
-                : "",
+            customerSearchOpen: true,
+            customer_id: exactSelectedCustomer ? selectedCustomer.id : "",
         });
+
+        clearTimeout(this.customerSearchTimer);
+        this.customerSearchTimer = setTimeout(() => this.loadCustomers(customerSearch), 180);
     }
 
     selectCustomer(customer) {
@@ -304,11 +370,13 @@ class Cart extends Component {
         this.setState({
             customer_id: customer.id,
             customerSearch: this.customerLabel(customer),
+            customerSearchOpen: false,
         });
     }
 
     clearCustomer() {
-        this.setState({ customer_id: "", customerSearch: "" });
+        this.setState({ customer_id: "", customerSearch: "", customerSearchOpen: false });
+        this.loadCustomers();
     }
 
     setPaymentMethod(event) {
@@ -327,33 +395,136 @@ class Cart extends Component {
         this.setState({ due_date: event.target.value });
     }
 
+    createOrder({ amount, paymentMethod, payments }) {
+        return axios
+            .post(apiUrl("/admin/orders"), {
+                customer_id: this.state.customer_id,
+                amount,
+                payment_method: paymentMethod,
+                payments,
+                item_discounts: this.state.cart.reduce((discounts, item) => ({
+                    ...discounts,
+                    [item.id]: item.pivot.discount || 0,
+                }), {}),
+                due_date: this.state.due_date,
+                custom_items: this.state.openItems.map((item) => ({
+                    name: item.name,
+                    price: item.price,
+                    quantity: item.quantity,
+                    discount: item.discount || 0,
+                })),
+            })
+            .then((res) => {
+                this.loadCart();
+                this.loadProducts("", this.state.selectedCategoryId);
+                this.loadQuickItems();
+                this.setState({
+                    openItems: [],
+                    customer_id: "",
+                    payment_method: "cash",
+                    due_date: currentDateInput(),
+                    lookup: "",
+                    search: "",
+                    customerSearch: "",
+                });
+                return res.data;
+            });
+    }
+
     handleClickSubmit() {
         const total = Number(this.getTotal(this.state.cart));
         const selectedMethod = this.state.payment_method;
-        const primaryLabel = paymentLabels[selectedMethod] || "Payment";
-        const primaryDefault = selectedMethod === "account" ? "0.00" : total.toFixed(2);
-        const accountDefault = selectedMethod === "account" ? total.toFixed(2) : "0.00";
+        const selectedLabel = paymentLabels[selectedMethod] || "Payment";
+
+        if (selectedMethod === "cash_account") {
+            return this.showCashAccountCheckout(total);
+        }
+
+        if ((selectedMethod === "account" || selectedMethod === "loan") && !this.state.customer_id) {
+            Swal.fire("Customer required", `Select a customer before using ${selectedLabel}.`, "error");
+            return;
+        }
+
+        const isLoan = selectedMethod === "loan";
         Swal.fire({
-            title: this.state.translations["received_amount"] || "Received Amount",
+            title: isLoan ? "Create loan sale" : this.state.translations["received_amount"] || "Received Amount",
             html: `
                 <div class="checkout-payment-summary">
                     <span>${this.state.translations["amount_due"] || "Amount due"}</span>
                     <strong>${window.APP.currency_symbol} ${total.toFixed(2)}</strong>
                 </div>
+                <p class="checkout-payment-note">
+                    ${isLoan
+                        ? "No payment will be received now. The full sale will stay pending on the selected customer."
+                        : `The full sale amount will be received by ${selectedLabel}.`}
+                </p>
+            `,
+            focusConfirm: false,
+            cancelButtonText: this.state.translations["cancel_pay"],
+            showCancelButton: true,
+            confirmButtonText: isLoan ? "Create Loan" : this.state.translations["confirm_pay"],
+            showLoaderOnConfirm: true,
+            preConfirm: () => {
+                const payments = isLoan ? [] : [{ method: selectedMethod, amount: total.toFixed(2) }];
+
+                return this.createOrder({
+                    amount: isLoan ? "0.00" : total.toFixed(2),
+                    paymentMethod: selectedMethod,
+                    payments,
+                }).catch((err) => {
+                    Swal.showValidationMessage(err.response?.data?.message || "Unable to create order");
+                });
+            },
+            allowOutsideClick: () => !Swal.isLoading(),
+        }).then((result) => this.showOrderComplete(result));
+    }
+
+    showCashAccountCheckout(total) {
+        const totalText = money(total);
+        Swal.fire({
+            title: "Cash + Account",
+            html: `
+                <div class="checkout-payment-summary">
+                    <span>${this.state.translations["amount_due"] || "Amount due"}</span>
+                    <strong>${window.APP.currency_symbol} ${totalText}</strong>
+                </div>
                 <label class="checkout-payment-field">
-                    <span>${primaryLabel} received</span>
-                    <input id="checkout-primary-amount" class="swal2-input" type="number" min="0" step="0.01" value="${primaryDefault}">
+                    <span>Cash received</span>
+                    <input id="checkout-primary-amount" class="swal2-input" type="number" min="0" max="${totalText}" step="0.01" value="${totalText}">
                 </label>
                 <label class="checkout-payment-field">
-                    <span>Account / credit</span>
-                    <input id="checkout-account-amount" class="swal2-input" type="number" min="0" step="0.01" value="${accountDefault}">
+                    <span>Account received</span>
+                    <input id="checkout-account-amount" class="swal2-input" type="number" min="0" max="${totalText}" step="0.01" value="0.00">
                 </label>
+                <small id="checkout-payment-help" class="checkout-payment-help">Cash + account cannot be more than ${window.APP.currency_symbol} ${totalText}.</small>
             `,
             focusConfirm: false,
             cancelButtonText: this.state.translations["cancel_pay"],
             showCancelButton: true,
             confirmButtonText: this.state.translations["confirm_pay"],
             showLoaderOnConfirm: true,
+            didOpen: () => {
+                const cashInput = document.getElementById("checkout-primary-amount");
+                const accountInput = document.getElementById("checkout-account-amount");
+                const helpText = document.getElementById("checkout-payment-help");
+                const clampSplitAmount = (activeInput, otherInput) => {
+                    const activeAmount = Math.max(Number(activeInput.value || 0), 0);
+                    const otherAmount = Math.max(Number(otherInput.value || 0), 0);
+                    const allowedAmount = Math.max(total - otherAmount, 0);
+
+                    if (activeAmount > allowedAmount) {
+                        activeInput.value = money(allowedAmount);
+                        helpText.textContent = `Maximum allowed here is ${window.APP.currency_symbol} ${money(allowedAmount)}.`;
+                        return;
+                    }
+
+                    activeInput.value = activeInput.value === "" ? "" : String(activeAmount);
+                    helpText.textContent = `Cash + account cannot be more than ${window.APP.currency_symbol} ${totalText}.`;
+                };
+
+                cashInput.addEventListener("input", () => clampSplitAmount(cashInput, accountInput));
+                accountInput.addEventListener("input", () => clampSplitAmount(accountInput, cashInput));
+            },
             preConfirm: () => {
                 const primaryAmount = Number(document.getElementById("checkout-primary-amount").value || 0);
                 const accountAmount = Number(document.getElementById("checkout-account-amount").value || 0);
@@ -379,64 +550,38 @@ class Cart extends Component {
                     return false;
                 }
 
-                const primaryMethod = selectedMethod === "account" ? "cash" : selectedMethod;
                 const payments = [
-                    primaryAmount > 0 ? { method: primaryMethod, amount: primaryAmount.toFixed(2) } : null,
+                    primaryAmount > 0 ? { method: "cash", amount: primaryAmount.toFixed(2) } : null,
                     accountAmount > 0 ? { method: "account", amount: accountAmount.toFixed(2) } : null,
                 ].filter(Boolean);
 
-                return axios
-                    .post(apiUrl("/admin/orders"), {
-                        customer_id: this.state.customer_id,
-                        amount: primaryAmount.toFixed(2),
-                        payment_method: this.state.payment_method,
-                        payments,
-                        item_discounts: this.state.cart.reduce((discounts, item) => ({
-                            ...discounts,
-                            [item.id]: item.pivot.discount || 0,
-                        }), {}),
-                        due_date: this.state.due_date,
-                        custom_items: this.state.openItems.map((item) => ({
-                            name: item.name,
-                            price: item.price,
-                            quantity: item.quantity,
-                            discount: item.discount || 0,
-                        })),
-                    })
-                    .then((res) => {
-                        this.loadCart();
-                        this.loadProducts("", this.state.selectedCategoryId);
-                        this.loadQuickItems();
-                        this.setState({
-                            openItems: [],
-                            customer_id: "",
-                            payment_method: "cash",
-                            due_date: currentDateInput(),
-                            lookup: "",
-                            search: "",
-                            customerSearch: "",
-                        });
-                        return res.data;
-                    })
-                    .catch((err) => {
-                        Swal.showValidationMessage(err.response?.data?.message || "Unable to create order");
-                    });
+                return this.createOrder({
+                    amount: primaryAmount.toFixed(2),
+                    paymentMethod: "cash_account",
+                    payments,
+                }).catch((err) => {
+                    Swal.showValidationMessage(err.response?.data?.message || "Unable to create order");
+                });
             },
             allowOutsideClick: () => !Swal.isLoading(),
-        }).then((result) => {
-            if (result.value) {
-                Swal.fire({
-                    title: this.state.translations["order_complete"] || "Order complete",
-                    text: result.value.message,
-                    icon: "success",
-                    showCancelButton: true,
-                    confirmButtonText: this.state.translations["print_receipt"] || "Print Receipt",
-                    cancelButtonText: this.state.translations["new_sale"] || "New Sale",
-                }).then((receiptResult) => {
-                    if (receiptResult.isConfirmed) {
-                        window.open(apiUrl(`/admin/orders/${result.value.order_id}`), "_blank");
-                    }
-                });
+        }).then((result) => this.showOrderComplete(result));
+    }
+
+    showOrderComplete(result) {
+        if (!result.value) {
+            return;
+        }
+
+        Swal.fire({
+            title: this.state.translations["order_complete"] || "Order complete",
+            text: result.value.message,
+            icon: "success",
+            showCancelButton: true,
+            confirmButtonText: this.state.translations["print_receipt"] || "Print Receipt",
+            cancelButtonText: this.state.translations["new_sale"] || "New Sale",
+        }).then((receiptResult) => {
+            if (receiptResult.isConfirmed) {
+                window.open(apiUrl(`/admin/orders/${result.value.order_id}`), "_blank");
             }
         });
     }
@@ -450,6 +595,8 @@ class Cart extends Component {
             openItems = [],
             customers = [],
             customerSearch = "",
+            customerSearchOpen = false,
+            customerLoading = false,
             lookup = "",
             translations = {},
             payment_method = "cash",
@@ -461,9 +608,9 @@ class Cart extends Component {
         const customerTerm = customerSearch.trim().toLowerCase();
         const selectedCustomer = customers.find((cus) => String(cus.id) === String(this.state.customer_id));
         const visibleCustomers = customerTerm
-            ? customers.filter((cus) => this.customerLabel(cus).toLowerCase().includes(customerTerm)).slice(0, 8)
+            ? customers.filter((cus) => this.customerSearchText(cus).includes(customerTerm)).slice(0, 8)
             : customers.slice(0, 8);
-        const showCustomerSuggestions = customerSearch.length > 0 && !selectedCustomer;
+        const showCustomerSuggestions = customerSearchOpen && !selectedCustomer;
 
         return (
             <div className="pos-workspace">
@@ -561,9 +708,8 @@ class Cart extends Component {
                                         value={selectedCustomer ? this.customerLabel(selectedCustomer) : customerSearch}
                                         onChange={this.handleCustomerSearch}
                                         onFocus={() => {
-                                            if (!selectedCustomer && !customerSearch) {
-                                                this.setState({ customerSearch: "" });
-                                            }
+                                            this.setState({ customerSearchOpen: true });
+                                            if (!customers.length) this.loadCustomers(customerSearch);
                                         }}
                                     />
                                     {(selectedCustomer || customerSearch) ? (
@@ -580,9 +726,10 @@ class Cart extends Component {
                                             <button type="button" key={cus.id} onClick={() => this.selectCustomer(cus)}>
                                                 <span>{cus.customer_code || "No code"}</span>
                                                 <strong>{`${cus.first_name || ""} ${cus.last_name || ""}`.trim()}</strong>
+                                                <small>{[cus.phone, cus.email].filter(Boolean).join(" | ")}</small>
                                             </button>
                                         )) : (
-                                            <div className="customer-picker-empty">No matching customer</div>
+                                            <div className="customer-picker-empty">{customerLoading ? "Searching customers..." : "No matching customer"}</div>
                                         )}
                                     </div>
                                 ) : null}
@@ -596,6 +743,8 @@ class Cart extends Component {
                                 <option value="jazzcash">{translations["jazzcash"] || "JazzCash"}</option>
                                 <option value="easypaisa">{translations["easypaisa"] || "EasyPaisa"}</option>
                                 <option value="account">{translations["account"] || "Account"}</option>
+                                <option value="cash_account">{translations["cash_account"] || "Cash + Account"}</option>
+                                <option value="loan">{translations["loan"] || "Loan"}</option>
                             </select>
 
                             <div className="d-flex mb-3">

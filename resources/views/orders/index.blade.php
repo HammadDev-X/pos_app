@@ -171,8 +171,9 @@
                             </div>
                             <div class="form-group">
                                 <label for="partialAmount">Enter Amount to Pay</label>
-                            <input type="number" class="form-control" step="0.01" id="partialAmount" name="amount" required>
+                            <input type="number" class="form-control" min="0.01" step="0.01" id="partialAmount" name="amount" required>
                             <small class="form-text text-muted">Remaining: <span id="remainingAmount"></span></small>
+                            <small class="form-text text-danger d-none" id="partialAmountHelp"></small>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -229,6 +230,23 @@
                         "'": '&#039;'
                     }[match];
                 });
+            }
+
+            function money(value) {
+                return parseFloat(value || 0).toFixed(2);
+            }
+
+            function clampMoneyInput(input, maximum, messageTarget) {
+                var amount = parseFloat(input.val() || 0);
+                var maxAmount = parseFloat(maximum || 0);
+
+                if (amount > maxAmount) {
+                    input.val(money(maxAmount));
+                    messageTarget.removeClass('d-none').text('Maximum allowed amount is ' + currencySymbol + ' ' + money(maxAmount) + '.');
+                    return;
+                }
+
+                messageTarget.addClass('d-none').text('');
             }
 
             // Invoice Modal
@@ -353,8 +371,13 @@
                 var remainingAmount = button.data('remaining-amount');
 
                 $('#modalOrderId').val(orderId);
-                $('#partialAmount').val(remainingAmount).attr('max', remainingAmount);
+                $('#partialAmount').val(money(remainingAmount)).attr('max', money(remainingAmount));
                 $('#remainingAmount').text(currencySymbol + ' ' + parseFloat(remainingAmount).toFixed(2));
+                $('#partialAmountHelp').addClass('d-none').text('');
+            });
+
+            $(document).on('input', '#partialAmount', function() {
+                clampMoneyInput($(this), $(this).attr('max'), $('#partialAmountHelp'));
             });
         });
     </script>

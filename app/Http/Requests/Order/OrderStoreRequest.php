@@ -33,7 +33,7 @@ class OrderStoreRequest extends FormRequest
             'customer_id' => ['nullable', 'integer', $customerRule],
             'amount' => ['required_without:payments', 'numeric', 'min:0', 'decimal:0,2'],
             'due_date' => ['nullable', 'date'],
-            'payment_method' => ['required', 'string', 'in:cash,card,bank_transfer,mobile_money,jazzcash,easypaisa,account,credit'],
+            'payment_method' => ['required', 'string', 'in:cash,card,bank_transfer,mobile_money,jazzcash,easypaisa,account,credit,cash_account,loan'],
             'payments' => ['nullable', 'array'],
             'payments.*.method' => ['required_with:payments', 'string', 'in:cash,card,bank_transfer,mobile_money,jazzcash,easypaisa,account,credit'],
             'payments.*.amount' => ['required_with:payments', 'numeric', 'min:0', 'decimal:0,2'],

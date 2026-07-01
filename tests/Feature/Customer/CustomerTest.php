@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\Customer;
+use App\Models\AuditLog;
 use App\Models\User;
 
 beforeEach(function () {
@@ -357,5 +358,44 @@ describe('Customer Salesman Visibility', function () {
             ->assertRedirect(route('customers.index'));
 
         expect($customer->refresh()->is_visible_to_salesman)->toBeFalse();
+    });
+});
+
+describe('Customer Previous Balance Payment', function () {
+    test('manager can receive customer previous balance payment', function () {
+        $customer = Customer::factory()->create(['pending_amount' => 312]);
+
+        $this->post(route('customers.opening-payment', $customer), [
+            'amount' => '112.50',
+            'payment_method' => 'cash',
+            'note' => 'Received at counter',
+        ])->assertRedirect();
+
+        $customer->refresh();
+
+        expect((float) $customer->pending_amount)->toBe(199.5);
+
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'customer.opening_payment',
+            'auditable_type' => Customer::class,
+            'auditable_id' => $customer->id,
+        ]);
+
+        $paymentLog = AuditLog::where('action', 'customer.opening_payment')->first();
+
+        expect((float) $paymentLog->properties['amount'])->toBe(112.5)
+            ->and($paymentLog->properties['payment_method'])->toBe('cash')
+            ->and($paymentLog->properties['note'])->toBe('Received at counter');
+    });
+
+    test('previous balance payment cannot exceed customer pending amount', function () {
+        $customer = Customer::factory()->create(['pending_amount' => 50]);
+
+        $this->post(route('customers.opening-payment', $customer), [
+            'amount' => '75.00',
+            'payment_method' => 'cash',
+        ])->assertSessionHasErrors();
+
+        expect((float) $customer->refresh()->pending_amount)->toBe(50.0);
     });
 });

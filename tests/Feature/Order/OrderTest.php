@@ -157,6 +157,26 @@ describe('Order Store', function () {
 
         expect(Order::latest()->first()->customer_id)->toBeNull();
     });
+
+    test('loan order keeps the full amount pending for the customer', function () {
+        $customer = Customer::factory()->create();
+        $product = Product::factory()->create(['price' => 125, 'quantity' => 10]);
+        $this->user->cart()->attach($product->id, ['quantity' => 2]);
+
+        $this->postJson(route('orders.store'), [
+            'customer_id' => $customer->id,
+            'payment_method' => 'loan',
+            'amount' => 0,
+            'payments' => [],
+        ])->assertCreated();
+
+        $order = Order::latest()->with(['items', 'payments'])->first();
+
+        expect($order->payments)->toHaveCount(0)
+            ->and($order->total())->toBe(250.0)
+            ->and($order->receivedAmount())->toBe(0.0)
+            ->and($order->remainingBalance())->toBe(250.0);
+    });
 });
 
 describe('Order Validation', function () {
@@ -200,6 +220,22 @@ describe('Order Validation', function () {
 
         $this->postJson(route('orders.store'), ['customer_id' => null, 'amount' => -10])
             ->assertJsonValidationErrors('amount');
+    });
+
+    test('loan order requires a selected customer', function () {
+        $product = Product::factory()->create(['price' => 100, 'quantity' => 10]);
+        $this->user->cart()->attach($product->id, ['quantity' => 1]);
+
+        $this->postJson(route('orders.store'), [
+            'customer_id' => null,
+            'payment_method' => 'loan',
+            'amount' => 0,
+            'payments' => [],
+        ])->assertStatus(400)
+            ->assertJson([
+                'success' => false,
+                'message' => 'Select a customer before creating a loan sale.',
+            ]);
     });
 });
 

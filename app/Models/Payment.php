@@ -41,6 +41,7 @@ class Payment extends Model
         'easypaisa' => 'EasyPaisa',
         'account' => 'Account',
         'credit' => 'Credit',
+        'loan' => 'Loan',
     ];
 
     protected $fillable = [

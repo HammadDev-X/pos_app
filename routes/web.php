@@ -49,6 +49,7 @@ Route::prefix('admin')->middleware(['auth', 'locale'])->group(function (): void 
     Route::resource('customers', CustomerController::class)->only(['index']);
     Route::resource('customers', CustomerController::class)->except(['index', 'show', 'destroy'])->middleware('role:admin,manager');
     Route::patch('/customers/{customer}/salesman-visibility', [CustomerController::class, 'toggleSalesmanVisibility'])->name('customers.toggle-salesman-visibility')->middleware('role:admin,manager');
+    Route::post('/customers/{customer}/opening-payment', [CustomerController::class, 'receiveOpeningPayment'])->name('customers.opening-payment')->middleware('role:admin,manager');
     Route::delete('/customers/{customer}', [CustomerController::class, 'destroy'])->name('customers.destroy')->middleware('role:admin,manager');
     Route::resource('customers', CustomerController::class)->only(['show']);
     Route::get('/orders/{order}/return', [OrderController::class, 'returnForm'])->name('orders.return');

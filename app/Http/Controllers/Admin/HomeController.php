@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\Customer;
 use App\Models\Expense;
 use App\Models\Order;
@@ -33,6 +34,10 @@ class HomeController extends Controller
             ->flatMap->payments
             ->filter(fn ($payment): bool => $payment->order && $payment->created_at->gt($payment->order->created_at))
             ->sum('amount');
+        $openingRecoveryPayments = AuditLog::query()
+            ->where('action', 'customer.opening_payment')
+            ->get()
+            ->sum(fn (AuditLog $log): float => (float) ($log->properties['amount'] ?? 0));
         $expenseTotals = $this->expenseLedgerTotals();
         $monthlyCalendar = $this->monthlySalesCalendar($orders);
         $expenseBreakdown = Expense::select('category', DB::raw('SUM(amount) as total'))
@@ -48,7 +53,7 @@ class HomeController extends Controller
             'sales_this_month' => $monthSales,
             'cash_sales' => $cashSales,
             'credit_sales' => $creditSales,
-            'recovery_payments' => $recoveryPayments,
+            'recovery_payments' => $recoveryPayments + $openingRecoveryPayments,
             'expenses_today' => $todayExpenses,
             'net_profit_today' => $todaySales - $todayCost - $todayExpenses,
             'customers_count' => Customer::count(),
