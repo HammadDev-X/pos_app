@@ -53,39 +53,53 @@
 
 @section('js')
 <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
-<script type="module">
-    $(document).ready(function() {
-        $(document).on('click', '.btn-delete', function() {
-            var $this = $(this);
-            const swalWithBootstrapButtons = Swal.mixin({
-                customClass: {
-                    confirmButton: 'btn btn-success',
-                    cancelButton: 'btn btn-danger'
-                },
-                buttonsStyling: false
-            })
+<script>
+    document.addEventListener('click', function(event) {
+        var button = event.target.closest('.btn-delete');
 
-            swalWithBootstrapButtons.fire({
-                title: 'Are you sure?',
-                text: "You won't be able to revert this!",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'Yes, delete it!',
-                cancelButtonText: 'No, cancel!',
-                reverseButtons: true
-            }).then((result) => {
-                if (result.value) {
-                    $.post($this.data('url'), {
-                        _method: 'DELETE',
-                        _token: '{{csrf_token()}}'
-                    }, function(res) {
-                        $this.closest('tr').fadeOut(500, function() {
-                            $(this).remove();
-                        })
-                    })
-                }
-            })
+        if (!button) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const swalWithBootstrapButtons = Swal.mixin({
+            customClass: {
+                confirmButton: 'btn btn-success',
+                cancelButton: 'btn btn-danger'
+            },
+            buttonsStyling: false
         })
-    })
+
+        swalWithBootstrapButtons.fire({
+            title: 'Are you sure?',
+            text: "You won't be able to revert this!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, delete it!',
+            cancelButtonText: 'No, cancel!',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.value) {
+                fetch(button.dataset.url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        _method: 'DELETE',
+                    }),
+                }).then(function(response) {
+                    if (!response.ok) {
+                        throw new Error('Delete failed');
+                    }
+
+                    button.closest('tr')?.remove();
+                });
+            }
+        });
+    });
 </script>
 @endsection

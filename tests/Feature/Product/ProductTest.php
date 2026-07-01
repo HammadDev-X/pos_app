@@ -108,6 +108,18 @@ describe('Product Store', function () {
             ->assertExists($product->image);
     });
 
+    test('product uploaded image url is served by media route', function () {
+        $image = UploadedFile::fake()->image('product.png');
+        $this->post(route('products.store'), array_merge($this->validProductData, ['image' => $image]))
+            ->assertRedirect(route('products.index'));
+
+        $product = Product::where('name', $this->validProductData['name'])->firstOrFail();
+
+        expect($product->image_url)->toContain(route('media.public', ['path' => $product->image], false));
+
+        $this->get($product->image_url)->assertOk();
+    });
+
     test('product can be created without optional fields', function () {
         $data = [
             'name' => 'Minimal Product',

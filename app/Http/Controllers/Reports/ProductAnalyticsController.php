@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Http\Controllers\Controller;
+use App\Support\PublicImageUrl;
 use Illuminate\Support\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class ProductAnalyticsController extends Controller
@@ -150,9 +150,7 @@ class ProductAnalyticsController extends Controller
                 $product->track_stock = (bool) $product->track_stock;
                 $product->is_quick_item = (bool) $product->is_quick_item;
                 $product->status = (bool) $product->status;
-                $product->image_url = $product->image
-                    ? Storage::disk('public')->url($product->image)
-                    : asset('images/img-placeholder.jpg');
+                $product->image_url = PublicImageUrl::make($product->image, 'images/img-placeholder.jpg');
 
                 return $product;
             })

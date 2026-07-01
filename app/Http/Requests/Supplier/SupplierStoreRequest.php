@@ -19,7 +19,7 @@ class SupplierStoreRequest extends FormRequest
             'email' => ['nullable', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:20'],
             'address' => ['nullable', 'string', 'max:500'],
-            'avatar' => ['nullable', 'image', 'max:2048'],
+            'avatar' => ['nullable', 'image', 'mimes:png,jpg,jpeg', 'max:10240'],
         ];
     }
 
@@ -33,7 +33,8 @@ class SupplierStoreRequest extends FormRequest
             'email.email' => __('supplier.validation.email_invalid'),
             'phone.max' => __('supplier.validation.phone_max'),
             'avatar.image' => __('supplier.validation.avatar_image'),
-            'avatar.max' => __('supplier.validation.avatar_max'),
+            'avatar.mimes' => __('The avatar must be a PNG or JPG file.'),
+            'avatar.max' => __('The avatar must not be larger than 10MB.'),
         ];
     }
 }

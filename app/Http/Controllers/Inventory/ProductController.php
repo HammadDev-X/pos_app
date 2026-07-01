@@ -7,12 +7,12 @@ use App\Http\Requests\Product\ProductStoreRequest;
 use App\Http\Requests\Product\ProductUpdateRequest;
 use App\Models\Category;
 use App\Models\Product;
+use App\Support\PublicStorage;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
@@ -63,7 +63,7 @@ class ProductController extends Controller
         $productData = $request->validated();
 
         if ($request->hasFile('image')) {
-            $productData['image'] = $request->file('image')->store('products', 'public');
+            $productData['image'] = PublicStorage::store($request->file('image'), 'products');
         }
 
         Product::create($productData);
@@ -104,9 +104,9 @@ class ProductController extends Controller
 
         if ($request->hasFile('image')) {
             if ($product->image) {
-                Storage::disk('public')->delete($product->image);
+                PublicStorage::delete($product->image);
             }
-            $productData['image'] = $request->file('image')->store('products', 'public');
+            $productData['image'] = PublicStorage::store($request->file('image'), 'products');
         }
 
         $product->update($productData);
@@ -121,7 +121,7 @@ class ProductController extends Controller
     public function destroy(Product $product): JsonResponse
     {
         if ($product->image) {
-            Storage::disk('public')->delete($product->image);
+            PublicStorage::delete($product->image);
         }
         $product->delete();
 

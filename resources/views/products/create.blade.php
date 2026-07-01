@@ -52,11 +52,11 @@
             <div class="form-group">
                 <label for="image">{{ __('product.Image') }}</label>
                 <div class="custom-file">
-                    <input type="file" class="custom-file-input" name="image" id="image">
+                    <input type="file" class="custom-file-input @error('image') is-invalid @enderror" name="image" id="image" accept=".png,.jpg,.jpeg,image/png,image/jpeg">
                     <label class="custom-file-label" for="image">{{ __('product.Choose_file') }}</label>
                 </div>
                 @error('image')
-                <span class="invalid-feedback" role="alert">
+                <span class="invalid-feedback d-block" role="alert">
                     <strong>{{ $message }}</strong>
                 </span>
                 @enderror
@@ -171,8 +171,10 @@
 @section('js')
 <script src="{{ asset('plugins/bs-custom-file-input/bs-custom-file-input.min.js') }}"></script>
 <script>
-    $(document).ready(function () {
-        bsCustomFileInput.init();
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof bsCustomFileInput !== 'undefined') {
+            bsCustomFileInput.init();
+        }
     });
 </script>
 @endsection

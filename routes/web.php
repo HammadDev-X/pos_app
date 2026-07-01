@@ -20,8 +20,15 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Redirector;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 
 Route::get('/', fn(): Redirector|RedirectResponse => redirect('/admin'));
+Route::get('/media/{path}', function (string $path) {
+    abort_if($path === '' || str_contains($path, '..') || str_starts_with($path, '/') || str_starts_with($path, '\\'), 404);
+    abort_unless(Storage::disk('public')->exists($path), 404);
+
+    return response()->file(Storage::disk('public')->path($path));
+})->where('path', '.*')->name('media.public');
 Route::get('/receipts/orders/{order}/pdf', [OrderController::class, 'pdf'])
     ->name('orders.receipt-pdf')
     ->middleware('signed:relative');

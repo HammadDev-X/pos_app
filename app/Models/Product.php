@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Traits\ProductScopes;
+use App\Support\PublicImageUrl;
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -10,7 +11,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * @property int $id
@@ -157,11 +157,7 @@ class Product extends Model
      */
     public function getImageUrlAttribute(): string
     {
-        if ($this->image) {
-            return Storage::disk('public')->url($this->image);
-        }
-
-        return asset('images/img-placeholder.jpg');
+        return PublicImageUrl::make($this->image, 'images/img-placeholder.jpg');
     }
 
     /**

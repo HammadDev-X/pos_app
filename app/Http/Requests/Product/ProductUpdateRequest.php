@@ -19,7 +19,7 @@ class ProductUpdateRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'category_id' => ['nullable', 'exists:categories,id'],
             'description' => ['nullable', 'string'],
-            'image' => ['nullable', 'image', 'max:2048'], // 2MB max
+            'image' => ['nullable', 'image', 'mimes:png,jpg,jpeg', 'max:10240'],
             'sku' => [
                 'nullable',
                 'string',
@@ -90,7 +90,8 @@ class ProductUpdateRequest extends FormRequest
             'price.decimal' => __('product.validation.price_decimal'),
             'quantity.required' => __('product.validation.quantity_required'),
             'quantity.min' => __('product.validation.quantity_min'),
-            'image.max' => __('product.validation.image_max'),
+            'image.mimes' => __('The product image must be a PNG or JPG file.'),
+            'image.max' => __('The product image must not be larger than 10MB.'),
         ];
     }
 }

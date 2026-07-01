@@ -72,7 +72,7 @@
                 <div class="form-group">
                     <label for="avatar">{{ __('supplier.Avatar') }}</label>
                     <div class="custom-file">
-                        <input type="file" class="custom-file-input" name="avatar" id="avatar">
+                        <input type="file" class="custom-file-input" name="avatar" id="avatar" accept=".png,.jpg,.jpeg,image/png,image/jpeg">
                         <label class="custom-file-label" for="avatar">{{ __('supplier.Choose_file') }}</label>
                     </div>
                     @error('avatar')
@@ -92,8 +92,10 @@
 @section('js')
     <script src="{{ asset('plugins/bs-custom-file-input/bs-custom-file-input.min.js') }}"></script>
     <script>
-        $(document).ready(function () {
-            bsCustomFileInput.init();
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof bsCustomFileInput !== 'undefined') {
+                bsCustomFileInput.init();
+            }
         });
     </script>
 @endsection

@@ -3,12 +3,12 @@
 
 namespace App\Models;
 
+use App\Support\PublicImageUrl;
 use Database\Factories\SupplierFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * @property int $id
@@ -65,10 +65,6 @@ class Supplier extends Model
      */
     public function getAvatarUrlAttribute(): string
     {
-        if ($this->avatar) {
-            return Storage::disk('public')->url($this->avatar);
-        }
-
-        return asset('images/avatar-placeholder.png');
+        return PublicImageUrl::make($this->avatar, 'images/img-placeholder.jpg');
     }
 }

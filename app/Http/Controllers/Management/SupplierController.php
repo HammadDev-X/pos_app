@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Supplier\SupplierStoreRequest;
 use App\Http\Requests\Supplier\SupplierUpdateRequest;
 use App\Models\Supplier;
+use App\Support\PublicStorage;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class SupplierController extends Controller
 {
@@ -38,7 +38,7 @@ class SupplierController extends Controller
         $supplierData = $request->validated();
 
         if ($request->hasFile('avatar')) {
-            $supplierData['avatar'] = $request->file('avatar')->store('suppliers', 'public');
+            $supplierData['avatar'] = PublicStorage::store($request->file('avatar'), 'suppliers');
         }
 
         Supplier::create($supplierData);
@@ -53,9 +53,9 @@ class SupplierController extends Controller
         if ($request->hasFile('avatar')) {
 
             if ($supplier->avatar) {
-                Storage::disk('public')->delete($supplier->avatar);
+                PublicStorage::delete($supplier->avatar);
             }
-            $supplierData['avatar'] = $request->file('avatar')->store('suppliers', 'public');
+            $supplierData['avatar'] = PublicStorage::store($request->file('avatar'), 'suppliers');
         }
 
         $supplier->update($supplierData);
@@ -67,7 +67,7 @@ class SupplierController extends Controller
     public function destroy(Supplier $supplier)
     {
         if ($supplier->avatar) {
-            Storage::disk('public')->delete($supplier->avatar);
+            PublicStorage::delete($supplier->avatar);
         }
 
         $supplier->delete();
